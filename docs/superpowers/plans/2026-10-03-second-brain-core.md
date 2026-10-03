@@ -29,7 +29,7 @@
 ## Review Focus
 
 1. **Windows-Notizen mit CRLF-Zeilenenden** – Originale müssen byte-identisch archiviert werden, und Git darf danach keine „Phantom-Änderung“ melden (sonst schlägt Check ④ fälschlich an). Abgesichert durch `.gitattributes` (`archive/** -text`); Tests in Task 6 (Archivieren CRLF) und Task 10 (Git-Check mit CRLF-Original).
-2. **Dateinamen ohne verwertbare Zeichen** (`???.txt`, nur Emoji, nur Satzzeichen) – erwartet: gültiger Slug-Fallback `note` statt Datei `2026-10-03-1530-.md`. Tests in Task 2 (slugify) und Task 6 (archive).
+2. **Ordner als Obsidian-Vault geöffnet** – Obsidian legt `.obsidian/` an und schreibt laufend `workspace.json`; per Autovervollständigung eingefügte Links sind standardmäßig Kurzlinks (`[[laufen]]`). Erwartet: `/ingest`-Vorprüfung bleibt grün (`.obsidian/` ist git-ignoriert) und neue Links sind vollständige Pfade (Obsidian-Einstellung `newLinkFormat: absolute`). Umsetzung in Task 2 (`.gitignore`) und Task 12 (`.obsidian/app.json`), Prüfung in Task 14 Step 6. (Leere Slugs wie `???.txt` → `note` sind zusätzlich in Task 2/6 getestet.)
 3. **`[[…]]` in Code-Blöcken oder Inline-Code** (z. B. Doku-Snippets in Einträgen) – erwartet: kein Link, kein „kaputter Link“-Fehler, keine Graph-Kante. Tests in Task 4 (extractLinks) und Task 10 (check).
 4. **Pfade außerhalb des erlaubten Bereichs** (`inbox/../categories.yml`, Quelle `../x`, relative Pfade bei Aufruf über `npm --prefix scripts`) – erwartet: klare Fehlermeldung, keine Datei wird verschoben/geschrieben; relative Pfade gelten relativ zum Aufrufverzeichnis (`INIT_CWD`). Tests in Task 6 und Task 9.
 5. **Fehlerhafte Konflikt-Callouts** (ID fehlt, falscher Typ `[!question] Conflict …`, `Affects:`-Zeile fehlt) – erwartet: `brain check` meldet einen Fehler, statt den offenen Punkt stillschweigend zu ignorieren. Tests in Task 4 (parseOpenPoints) und Task 10 (check).
@@ -159,7 +159,16 @@ Prüfen, ob `models.embed` dauerhaft in `index.yml` gesetzt werden kann (Datei a
 ```
 Danach: `qmd collection remove spike && rm -rf ~/qmd-spike`.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 8: Zeitzone prüfen**
+
+Archivnamen und Log-Zeilen nutzen die Ortszeit. WSL steht oft auf UTC.
+```bash
+date
+cat /etc/timezone 2>/dev/null; readlink /etc/localtime
+```
+Expected: Europe/Berlin. Sonst den Nutzer bitten: `! sudo ln -sf /usr/share/zoneinfo/Europe/Berlin /etc/localtime && echo Europe/Berlin | sudo tee /etc/timezone` und das Ergebnis in der Spike-Notiz vermerken.
+
+- [ ] **Step 9: Commit**
 
 ```bash
 cd /mnt/f/second-brain
@@ -190,6 +199,7 @@ git commit -m "docs: record qmd GPU spike results"
 `.gitignore`:
 ```
 scripts/node_modules/
+.obsidian/
 INDEX.md
 graph.json
 LOG.md
@@ -3234,6 +3244,7 @@ Design and data contract: `docs/superpowers/specs/2026-10-03-second-brain-design
 - Never change or delete anything in `archive/`. Moving only via `brain recategorize`.
 - Never create a category without explicit user approval. If none fits and none is approved, use `_uncategorized`.
 - Never run `git push`.
+- When the user dictates a note in the chat (outside `/ingest`), save it verbatim to `inbox/chat-note.md` (`chat-note-2.md`, … if taken) and run the `/ingest` flow.
 - Language: everything machine-read is English (code, CLI, file names, frontmatter keys, markers like `## Related`, `## Sources`, `Conflict C-…`, `Unclear Q-…`, `Affects:`). Everything the user reads (titles, summaries, prose, callout text, answers) is German.
 
 ## brain CLI (run from the repo root)
@@ -3320,7 +3331,7 @@ argument-hint: [note text to add first]
 
 Process the inbox following `CLAUDE.md` and `wiki/CLAUDE.md`. Talk to the user in German.
 
-If `$ARGUMENTS` is not empty, first save it verbatim as `inbox/<YYYY-MM-DD-HHMM>-chat-note.md`.
+If `$ARGUMENTS` is not empty, first save it verbatim as `inbox/chat-note.md` (`chat-note-2.md`, … if taken); `brain archive` adds the timestamp later.
 
 ## 1. Preflight – stop on failure
 
@@ -3391,7 +3402,17 @@ If nothing fits: answer "Dazu steht nichts in deinem Brain." and optionally name
 If qmd is unavailable, say so instead of silently answering with less.
 ~~~
 
-- [ ] **Step 6: Prüfen und committen**
+- [ ] **Step 6: Obsidian-Linkformat vorbelegen**
+
+Damit in Obsidian eingefügte Links vollständige Pfade sind (`.obsidian/` ist git-ignoriert, die Datei bleibt lokal):
+```bash
+mkdir -p /mnt/f/second-brain/.obsidian
+[ -f /mnt/f/second-brain/.obsidian/app.json ] || printf '{\n  "newLinkFormat": "absolute",\n  "useMarkdownLinks": false\n}\n' > /mnt/f/second-brain/.obsidian/app.json
+cat /mnt/f/second-brain/.obsidian/app.json
+```
+Existiert die Datei schon (Vault war bereits offen): in Obsidian unter Einstellungen → Dateien & Links „Format für neue Links“ = „Absoluter Pfad im Vault“ und „Wikilinks verwenden“ = an setzen.
+
+- [ ] **Step 7: Prüfen und committen**
 
 ```bash
 cd /mnt/f/second-brain && brain check && git status --short
@@ -3444,6 +3465,12 @@ qmd update && qmd embed
 qmd status
 ```
 Expected: Status zeigt beide Collections; bei noch leerem Brain 0 Dokumente – das ist korrekt.
+
+**Masken-Prüfung** (nach dem ersten `/ingest` in Task 14 wiederholen, sobald Einträge existieren):
+```bash
+qmd search "Writing rules" -c wiki
+```
+Expected: kein Treffer auf `CLAUDE.md`. Wird `wiki/CLAUDE.md` gefunden, die Collection neu anlegen (`qmd collection remove wiki`) und statt der Maske ein `ignore: ['CLAUDE.md']` für die Collection `wiki` in der qmd-Konfigurationsdatei (`index.yml`, Ort laut Spike-Notiz) setzen, dann `qmd update && qmd embed`.
 
 - [ ] **Step 5: MCP-Anbindung in Claude Code**
 
@@ -3533,9 +3560,17 @@ git status --short
 ```
 Expected: `brain check` ohne Fehler; `git status` zeigt `R` für die Archivdatei; Links in anderen Einträgen zeigen auf den neuen Pfad. Danach committen: `git add -A && git commit -m "chore: categorize <eintrag>"`.
 
-- [ ] **Step 6: Abnahmeprotokoll schreiben und committen**
+- [ ] **Step 6: Obsidian-Verträglichkeit prüfen (mit dem Nutzer)**
 
-`docs/superpowers/notes/2026-10-03-e2e-acceptance.md`: je Prüfpunkt aus Steps 3–5 „erfüllt / nicht erfüllt“ mit kurzer Beobachtung und den gemessenen Zeiten.
+Den Nutzer bitten, `F:\second-brain` in Obsidian als Vault zu öffnen, in einem Eintrag per Autovervollständigung einen Link auf einen anderen Eintrag einzufügen und zu speichern. Danach:
+```bash
+cd /mnt/f/second-brain && git status --short && brain check
+```
+Expected: `git status` zeigt nur die geänderte Eintragsdatei (kein `.obsidian/`); der neue Link hat die Form `[[wiki/<kategorie>/<eintrag>]]`; `brain check` ohne Fehler. Anschließend `brain log update <eintrag> "Link in Obsidian ergänzt"` und committen. Zusätzlich die Masken-Prüfung aus Task 13 wiederholen.
+
+- [ ] **Step 7: Abnahmeprotokoll schreiben und committen**
+
+`docs/superpowers/notes/2026-10-03-e2e-acceptance.md`: je Prüfpunkt aus Steps 3–6 „erfüllt / nicht erfüllt“ mit kurzer Beobachtung und den gemessenen Zeiten.
 ```bash
 git add docs/superpowers/notes/2026-10-03-e2e-acceptance.md
 git commit -m "docs: record end-to-end acceptance"
