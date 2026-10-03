@@ -1,0 +1,51 @@
+# Second Brain – Workspace
+
+Persönliche Wissensbasis für Job- und privates Wissen. Die Markdown-Dateien sind die einzige Wahrheit.
+Design und Datenvertrag: `docs/superpowers/specs/2026-10-03-second-brain-design.md` (Abschnitt 4).
+
+@INDEX.md
+
+## Aufbau
+
+- `inbox/` – Rohnotizen, die auf `/ingest` warten (nicht in Git)
+- `archive/<kategorie>/YYYY/MM/` – Originalnotizen, byte-identisch, nie ändern oder löschen
+- `wiki/<kategorie>/<eintrag>.md` – verdichtete Wissenseinträge; Schreibregeln in `wiki/CLAUDE.md`
+- `categories.yml` – die einzigen erlaubten Kategorien; `_uncategorized` ist der reservierte Auffangordner
+- `INDEX.md`, `graph.json` – abgeleitet von `brain index` (nicht in Git)
+- `LOG.md` – Änderungsprotokoll, nur anhängen, nur über `brain` (nicht in Git)
+- `scripts/` – das CLI `brain` (Node/TypeScript, Tests: `npm --prefix scripts test`)
+
+## Feste Regeln
+
+- `INDEX.md` und `graph.json` nie bearbeiten – `brain index` ausführen.
+- Nie direkt in `LOG.md` schreiben – `brain log` nutzen; die übrigen `brain`-Befehle protokollieren selbst.
+- In `archive/` nie etwas ändern oder löschen. Verschieben nur per `brain recategorize`.
+- Nie eine Kategorie ohne ausdrückliche Freigabe des Nutzers anlegen. Passt keine und wird keine freigegeben: `_uncategorized`.
+- Nie `git push` ausführen.
+- Diktiert der Nutzer im Chat eine Notiz (außerhalb von `/ingest`): wörtlich als `inbox/chat-note.md` speichern (`chat-note-2.md`, … falls belegt) und den `/ingest`-Ablauf ausführen.
+- Sprache: Was eine Maschine auswertet, ist Englisch (Code, CLI, Datei- und Ordnernamen, Frontmatter-Felder, die Marker `## Related`, `## Sources`, `Conflict C-…`, `Unclear Q-…`, `Affects:`). Was der Nutzer liest (Titel, Summary, Fließtext, Callout-Text, Antworten), ist Deutsch.
+
+## CLI `brain` (aus der Repo-Wurzel)
+
+| Befehl | Zweck |
+|---|---|
+| `brain archive <inbox-datei> --category <slug>` | Notiz ins Archiv verschieben, gibt den Archivpfad aus |
+| `brain remember --category <slug> --title <t> --summary <s> --source <archivpfad> [--related <eintrag> …] [--tags a,b] < body` | neuen Eintrag anlegen und Index neu erzeugen |
+| `brain link <eintrag> <eintrag> […]` / `brain link --remove …` | gegenseitige `## Related`-Links setzen/entfernen |
+| `brain log <op> <ziel> [<beschreibung>]` | Zeile an `LOG.md` anhängen (Ops: archive, create, update, link, unlink, conflict, resolve, recategorize, category, ingest) |
+| `brain index` | `INDEX.md` und `graph.json` neu erzeugen |
+| `brain check` | Fehler (Exit 1) und Hinweise (offene Punkte, Einträge ohne Kategorie) |
+| `brain recategorize --rename a b \| --merge a b \| --move <eintrag> <kategorie>` | nur auf Anweisung des Nutzers |
+
+## Brain-First-Protokoll (Suchleiter)
+
+Für jede Wissensfrage genau so vorgehen:
+
+1. Keywords aus der Frage bestimmen.
+2. Kandidaten mit `INDEX.md` und qmd `query` auf Collection `wiki` scoren – noch KEINE Dateien öffnen. Collection `archive` oder beide nur, wenn ausdrücklich verlangt.
+3. Genau EINE Top-Datei öffnen.
+4. Nur den relevanten Abschnitt lesen (Referenz-Map und Überschriften nutzen).
+5. Höchstens EINEM Pointer folgen (`[[Link]]`, ein Eintrag aus `## Related` oder ein `sources`-Pfad).
+6. Nur aus dem Gelesenen antworten, mit `[[…]]`-Quellenlinks. Reicht das nicht: „Dazu steht nichts in deinem Brain.“
+
+Einträge schreiben: siehe `wiki/CLAUDE.md`.
