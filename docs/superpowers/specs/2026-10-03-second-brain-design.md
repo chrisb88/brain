@@ -45,7 +45,8 @@ Diese Spec umfasst nur den **Wissenskern**: Ablage, Kategorien, Verarbeitung, In
 
 | Komponente | Ort | Hinweis |
 |---|---|---|
-| Brain-Ordner (Git-Repo) | `/mnt/f/second-brain` | Windows-Laufwerk, direkt von Windows/Obsidian nutzbar |
+| Brain-Daten (Git-Repo ohne Remote) | `/mnt/f/second-brain-data` | Windows-Laufwerk, direkt von Windows/Obsidian nutzbar; wird nie gepusht |
+| Code (CLI, Vorlagen, Doku) | `/mnt/f/second-brain` | darf gepusht werden; enthält keine Brain-Daten |
 | Claude Code | WSL | |
 | Node.js | WSL, v24.2.0 | qmd benötigt ≥ 22; TypeScript per Type-Stripping ohne Build |
 | qmd | WSL, global (`npm install -g @tobilu/qmd`) | Modelle in `~/.cache/qmd/models/` |
@@ -55,6 +56,8 @@ Diese Spec umfasst nur den **Wissenskern**: Ablage, Kategorien, Verarbeitung, In
 **Risiko GPU:** Ob die vorkompilierten CUDA-Binaries die Blackwell-GPU unterstützen, ist offen. Erster Umsetzungsschritt ist ein Spike. Fallbacks: Vulkan, dann CPU (`QMD_FORCE_CPU=1`). Funktional ändert sich nichts, nur die Geschwindigkeit.
 
 ## 3. Ordnerstruktur
+
+> Seit der Trennung (siehe `2026-10-03-data-repo-separation-design.md`) liegt diese Struktur im Daten-Repo; `scripts/` und `docs/` liegen im Code-Repo, die Konfiguration kommt aus `template/`.
 
 ```
 /mnt/f/second-brain/
@@ -243,6 +246,8 @@ Node/TypeScript in `scripts/`, direkt ausgeführt von Node 24, **ohne Modellaufr
 | `brain remember --category <slug> --title <t> --summary <s> --source <archivpfad> [--source …] [--tags a,b] [--related <eintrag> …]` (Body über stdin) | Legt **neuen** Eintrag `wiki/<kategorie>/<slug(title)>.md` mit vollständigem Frontmatter (`created` = `updated` = heute), Body und Abschnitt `## Sources` an; `--related` wirkt wie `brain link` (beidseitig). Führt danach `brain index` aus – ein Schritt. Fehler bei: unbekannter Kategorie, Eintrag existiert bereits, Quelle oder Related-Eintrag existiert nicht, Summary leer oder mehrzeilig. Bestehende Einträge ändert Claude direkt per Edit. |
 | `brain link <eintrag> <eintrag> [<eintrag> …]` / `brain link --remove <eintrag> <eintrag> […]` | Setzt bzw. entfernt die Verwandt-Beziehung **paarweise zwischen allen genannten Einträgen** in deren `## Related`-Abschnitten (Abschnitt wird bei Bedarf vor `## Sources` angelegt bzw. leer entfernt; Liste alphabetisch). Idempotent. Fehler bei nicht existierendem Eintrag. Ändert nichts außer dem Verwandt-Abschnitt. |
 | `brain category add <slug> --name <name> [--description <text>]` / `brain category list` | Neue Kategorie in `categories.yml` registrieren (Slug-Muster, nicht vorhanden, nicht `_uncategorized`, Name nicht leer); protokolliert `category`, führt `brain index` aus. Nur nach Freigabe durch den Nutzer. `list` zeigt Kategorien mit Anzahl der Einträge. |
+| `brain init <pfad>` / `brain init --update` | Neues Daten-Repo anlegen (Git ohne Remote, Push-Schutz, Konfiguration aus `template/`, leere Kategorien, qmd-Index) bzw. Konfiguration eines bestehenden Brains aus `template/` aktualisieren, ohne Daten zu ändern. |
+| `brain qmd setup` / `brain qmd <argumente>` | Eigenen qmd-Index des Brains einrichten (Collections, Kontexte, Qwen3-Embedding, Indexierung) bzw. qmd mit `--index brain-<ordner>` aufrufen. |
 | `brain help` (auch `--help`, `-h`, ohne Argumente) | Englische Übersicht aller Befehle mit Beispielen, Exit 0. Unbekannter Befehl → Fehler mit Hinweis auf `brain help`. |
 | `brain log <op> <ziel> [<beschreibung>]` | Hängt eine Zeile gemäß 4.6 an `LOG.md` an. Fehler bei unbekannter Operation. |
 | `brain index` | Liest `categories.yml`, alle Einträge und Archivdateien; schreibt `INDEX.md` (4.4) und `graph.json` (4.5) vollständig neu. Gleiche Eingaben → gleiche Ausgabe. |
@@ -276,7 +281,8 @@ Node/TypeScript in `scripts/`, direkt ausgeführt von Node 24, **ohne Modellaufr
 
 ## 7. qmd
 
-- Global installiert, Claude-Code-Plugin: `claude plugin install qmd@qmd` (MCP-Tools `query`, `get`, `multi_get`, `status`).
+- Jedes Brain hat einen eigenen Index `brain-<ordner>`; Aufrufe über `brain qmd …`, MCP-Server über `brain qmd mcp` in `.mcp.json` (siehe Trennungs-Spec Abschnitt 6). Die Collection-Angaben unten gelten je Brain-Index.
+- Global installiert; MCP-Tools `query`, `get`, `multi_get`, `status`.
 - Zwei Collections:
   - `wiki`: `wiki/**/*.md`, ignoriert `wiki/CLAUDE.md` – verdichtete, aktuelle Wissenseinträge.
   - `archive`: `archive/**/*.md` – Originale, unverdichtet, ggf. veraltet.
