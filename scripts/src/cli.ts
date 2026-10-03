@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { archiveNote } from './archive.ts';
+import { runIndex } from './indexer.ts';
 import { linkEntries } from './link.ts';
 import { appendLog, isLogOp } from './log.ts';
 import { brainRoot } from './paths.ts';
@@ -53,6 +54,11 @@ function run(argv: string[], root: string, now: Date): number {
             const remove = values.remove === true;
             const changed = linkEntries(root, positionals, remove, now);
             console.log(`${changed} Beziehung(en) ${remove ? 'entfernt' : 'gesetzt'}`);
+            return 0;
+        }
+        case 'index': {
+            runIndex(root);
+            console.log('INDEX.md und graph.json erzeugt');
             return 0;
         }
         default:
