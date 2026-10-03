@@ -2,6 +2,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { installPushGuard } from '../src/guard.ts';
 
 export const NOW = new Date(2026, 9, 3, 15, 30);
 export const FIXED_MTIME = new Date('2026-10-02T15:30:00Z');
@@ -121,6 +122,7 @@ export function initGit(root: string): void {
     git(root, 'config', 'user.email', 'test@example.com');
     git(root, 'config', 'user.name', 'Test');
     git(root, 'config', 'core.autocrlf', 'false');
+    installPushGuard(root);
     git(root, 'add', '-A');
     git(root, 'commit', '-q', '--allow-empty', '-m', 'init');
 }

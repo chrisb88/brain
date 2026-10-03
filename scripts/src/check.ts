@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { isKnownCategory, UNCATEGORIZED } from './categories.ts';
 import { archiveIntegrityErrors, isGitRepo } from './git.ts';
+import { pushGuardErrors } from './guard.ts';
 import { extractLinks, getRelated, headings, parseOpenPoints, splitFrontmatter } from './markdown.ts';
 import { existsExactCase, hasParentSegment, normalizeId } from './paths.ts';
 import { type Brain, type Entry, loadBrain, relatedIds } from './scan.ts';
@@ -174,6 +175,7 @@ export function checkBrain(root: string): CheckReport {
     checkOpenPoints(brain, errors, hints);
     if (isGitRepo(root)) {
         errors.push(...archiveIntegrityErrors(root));
+        errors.push(...pushGuardErrors(root));
     } else {
         hints.push('Kein Git-Repository – Archiv-Integrität wurde nicht geprüft.');
     }
