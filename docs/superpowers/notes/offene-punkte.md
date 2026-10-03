@@ -10,4 +10,3 @@ Aus dem Final Review vom 2026-10-03 (Branch `feat/brain-core`). Bewusst zurückg
 6. **Obsidian indexiert `scripts/node_modules`** – in Obsidian unter Einstellungen → Dateien & Links → „Ausgeschlossene Dateien“ `scripts/` eintragen (bzw. `userIgnoreFilters` in `.obsidian/app.json`).
 7. **Links in Inline-Code** – `recategorize` schreibt `[[…]]` in Inline-Code mit um (Code-Blöcke bleiben unberührt).
 8. **Frischer Clone** – `brain` braucht einmalig `npm --prefix scripts install && npm --prefix scripts link`; steht bisher nur im Plan, nicht in `CLAUDE.md`.
-9. **Abnahme Task 14** – End-to-End-Test mit echten Notizen, Obsidian und `/ask` steht noch aus.
