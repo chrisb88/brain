@@ -31,6 +31,7 @@ Diese Spec umfasst nur den **Wissenskern**: Ablage, Kategorien, Verarbeitung, In
 - Antworten strikt aus dem Brain, mit Quellen; fehlendes Wissen wird benannt.
 - Obsidian-kompatibel: `[[Wiki-Links]]`, YAML-Frontmatter, Callouts.
 - Einträge auf Deutsch, Fachbegriffe im Original.
+- **Sprachregel:** Alles, was eine Maschine liest, ist Englisch – Code, CLI-Befehle und Flags (`/ask --archive`), Datei- und Ordnernamen (`_uncategorized`), Frontmatter-Felder, Log-Operationen und die vom CLI ausgewerteten Marker in Einträgen (`## Related`, `## Sources`, `[!warning] Conflict C-…`, `[!question] Unclear Q-…`, `Affects:`). Alles, was der Nutzer liest (Titel, Summary, Fließtext, Callout-Inhalt), ist Deutsch.
 - Brain-Ordner auf Windows: `F:\second-brain` = `/mnt/f/second-brain`, Git-Repo, niemals push durch Claude.
 - Deterministische Werkzeuge als Node/TypeScript-CLI `brain` – ohne Modellaufruf.
 - Suche mit [qmd](https://github.com/tobi/qmd), global in WSL, multilinguales Embedding (Qwen3), angebunden per Claude-Code-Plugin; getrennte Collections für Wiki und Archiv, einzeln oder gemeinsam durchsuchbar.
@@ -121,17 +122,17 @@ updated: 2026-10-02
 ---
 # Kubernetes Ingress
 
-> [!warning] Widerspruch W-20261003-1
-> Betrifft: [[wiki/technik/kubernetes-ingress]], [[wiki/technik/azure-aks]]
+> [!warning] Conflict C-20261003-1
+> Affects: [[wiki/technik/kubernetes-ingress]], [[wiki/technik/azure-aks]]
 > Laut [[archive/technik/2026/10/2026-10-02-1530-ingress-tls]] gilt X, laut [[archive/technik/2026/09/2026-09-14-0900-aks-setup]] gilt Y.
 
 …verdichteter Inhalt…
 
-## Verwandt
+## Related
 - [[wiki/technik/azure-aks]]
 - [[wiki/ideen-konzepte/homelab]]
 
-## Quellen
+## Sources
 - [[archive/technik/2026/10/2026-10-02-1530-ingress-tls]]
 ```
 
@@ -142,16 +143,16 @@ updated: 2026-10-02
 **Links:**
 
 - Immer als Pfad ab Repo-Wurzel ohne `.md`: `[[wiki/kategorie/eintrag]]`, optional `|Alias` oder `#Abschnitt`.
-- **Abschnitt `## Verwandt`:** Liste der zusammenhängenden Einträge (auch kategorieübergreifend), ein Link pro Zeile, keine Abschnitts-Anker. **Symmetrisch:** Steht B in A's Verwandt-Liste, steht A in B's Verwandt-Liste. Gesetzt/entfernt wird per `brain link`; `brain check` prüft die Symmetrie. Links im Fließtext sind zusätzlich erlaubt und müssen nicht symmetrisch sein.
-- Abschnitt `## Quellen`: ein Link pro Eintrag in `sources`.
-- Reihenfolge am Dateiende: `## Verwandt` (falls vorhanden), dann `## Quellen`.
+- **Abschnitt `## Related`:** Liste der zusammenhängenden Einträge (auch kategorieübergreifend), ein Link pro Zeile, keine Abschnitts-Anker. **Symmetrisch:** Steht B in A's Verwandt-Liste, steht A in B's Verwandt-Liste. Gesetzt/entfernt wird per `brain link`; `brain check` prüft die Symmetrie. Links im Fließtext sind zusätzlich erlaubt und müssen nicht symmetrisch sein.
+- Abschnitt `## Sources`: ein Link pro Eintrag in `sources`.
+- Reihenfolge am Dateiende: `## Related` (falls vorhanden), dann `## Sources`.
 
 **Offene Punkte (Widersprüche, Unklarheiten):**
 
 - Als Obsidian-Callout **oben im Eintrag, direkt unter der `#`-Überschrift** – beim Öffnen sofort sichtbar.
-- Widerspruch: `> [!warning] Widerspruch W-YYYYMMDD-N`; Unklarheit: `> [!question] Unklar U-YYYYMMDD-N`. `N` fortlaufend pro Tag, ID im ganzen Brain eindeutig.
-- Zweite Zeile: `> Betrifft: [[…]], [[…]]` – alle betroffenen Einträge.
-- Ein offener Punkt steht in **allen** unter „Betrifft“ genannten Einträgen, mit identischer ID und identischer Betrifft-Liste; in keinem anderen Eintrag. Auflösen heißt: Inhalt korrigieren und den Callout mit dieser ID aus **allen** Einträgen entfernen. `brain check` erzwingt beides.
+- Widerspruch: `> [!warning] Conflict C-YYYYMMDD-N`; Unklarheit: `> [!question] Unclear Q-YYYYMMDD-N`. `N` fortlaufend pro Tag, ID im ganzen Brain eindeutig.
+- Zweite Zeile: `> Affects: [[…]], [[…]]` – alle betroffenen Einträge.
+- Ein offener Punkt steht in **allen** unter „Affects“ genannten Einträgen, mit identischer ID und identischer Affects-Liste; in keinem anderen Eintrag. Auflösen heißt: Inhalt korrigieren und den Callout mit dieser ID aus **allen** Einträgen entfernen. `brain check` erzwingt beides.
 
 **Sonstiges:**
 
@@ -182,7 +183,7 @@ Arztbefunde, Training, Ernährung, Schlaf.
 - Kategorien in der Reihenfolge von `categories.yml`, danach „Ohne Kategorie“ (nur wenn nicht leer); Einträge alphabetisch nach Titel.
 - Pro Eintrag: Link, Titel, Summary und – falls vorhanden – die Verwandt-Links (`↔`, alphabetisch).
 - Kategorien ohne Einträge erscheinen mit Hinweis „(noch leer)“.
-- **Referenz-Map:** für jedes „große“ Dokument (> 150 Zeilen, Konstante im Code) die `##`-Überschriften (außer „Verwandt“ und „Quellen“) als Abschnittslinks.
+- **Referenz-Map:** für jedes „große“ Dokument (> 150 Zeilen, Konstante im Code) die `##`-Überschriften (außer `Related` und `Sources`) als Abschnittslinks.
 - Offene Punkte stehen **nicht** im Index (Bericht über `brain check`).
 
 ### 4.5 graph.json (abgeleitet)
@@ -238,12 +239,12 @@ Node/TypeScript in `scripts/`, direkt ausgeführt von Node 24, **ohne Modellaufr
 | Befehl | Verhalten |
 |---|---|
 | `brain archive <inbox-datei> --category <slug>` | Kategorie muss in `categories.yml` stehen oder `_uncategorized` sein. Verschiebt nach `archive/<kategorie>/YYYY/MM/YYYY-MM-DD-HHMM-<slug>.md`. Slug aus Dateiname ohne Endung: Kleinbuchstaben, ä→ae, ö→oe, ü→ue, ß→ss, sonstige Nicht-Alphanumerik → `-`, mehrfache/Rand-`-` entfernt. Kollision → `-2`, `-3`, … Inhalt unverändert. Gibt neuen Pfad auf stdout aus. Fehler bei: Datei nicht in `inbox/`, fehlt, falsche Endung, unbekannte Kategorie. |
-| `brain remember --category <slug> --title <t> --summary <s> --source <archivpfad> [--source …] [--tags a,b] [--related <eintrag> …]` (Body über stdin) | Legt **neuen** Eintrag `wiki/<kategorie>/<slug(title)>.md` mit vollständigem Frontmatter (`created` = `updated` = heute), Body und Abschnitt „Quellen“ an; `--related` wirkt wie `brain link` (beidseitig). Führt danach `brain index` aus – ein Schritt. Fehler bei: unbekannter Kategorie, Eintrag existiert bereits, Quelle oder Related-Eintrag existiert nicht, Summary leer oder mehrzeilig. Bestehende Einträge ändert Claude direkt per Edit. |
-| `brain link <eintrag> <eintrag> [<eintrag> …]` / `brain link --remove <eintrag> <eintrag> […]` | Setzt bzw. entfernt die Verwandt-Beziehung **paarweise zwischen allen genannten Einträgen** in deren `## Verwandt`-Abschnitten (Abschnitt wird bei Bedarf vor `## Quellen` angelegt bzw. leer entfernt; Liste alphabetisch). Idempotent. Fehler bei nicht existierendem Eintrag. Ändert nichts außer dem Verwandt-Abschnitt. |
+| `brain remember --category <slug> --title <t> --summary <s> --source <archivpfad> [--source …] [--tags a,b] [--related <eintrag> …]` (Body über stdin) | Legt **neuen** Eintrag `wiki/<kategorie>/<slug(title)>.md` mit vollständigem Frontmatter (`created` = `updated` = heute), Body und Abschnitt `## Sources` an; `--related` wirkt wie `brain link` (beidseitig). Führt danach `brain index` aus – ein Schritt. Fehler bei: unbekannter Kategorie, Eintrag existiert bereits, Quelle oder Related-Eintrag existiert nicht, Summary leer oder mehrzeilig. Bestehende Einträge ändert Claude direkt per Edit. |
+| `brain link <eintrag> <eintrag> [<eintrag> …]` / `brain link --remove <eintrag> <eintrag> […]` | Setzt bzw. entfernt die Verwandt-Beziehung **paarweise zwischen allen genannten Einträgen** in deren `## Related`-Abschnitten (Abschnitt wird bei Bedarf vor `## Sources` angelegt bzw. leer entfernt; Liste alphabetisch). Idempotent. Fehler bei nicht existierendem Eintrag. Ändert nichts außer dem Verwandt-Abschnitt. |
 | `brain log <op> <ziel> [<beschreibung>]` | Hängt eine Zeile gemäß 4.6 an `LOG.md` an. Fehler bei unbekannter Operation. |
 | `brain index` | Liest `categories.yml`, alle Einträge und Archivdateien; schreibt `INDEX.md` (4.4) und `graph.json` (4.5) vollständig neu. Gleiche Eingaben → gleiche Ausgabe. |
-| `brain check` | Prüft das Brain und gibt einen Bericht in zwei Stufen aus. **Fehler** (→ Exit 1): ① `[[Links]]` in `wiki/` zeigen auf nicht existierende Dateien/Abschnitte; ② Pflichtfelder laut 4.3 fehlen, `category` ≠ Ordnername, `sources` existieren nicht; ③ Ordner unter `wiki/`/`archive/` weder in `categories.yml` noch `_uncategorized`; ④ Archiv-Integrität per Git verletzt (Datei unter `archive/` geändert oder gelöscht; Umbenennung mit Inhaltsänderung) – neue Dateien erlaubt; ⑤ Verwandt-Beziehung nicht symmetrisch; ⑥ offener Punkt unvollständig (ID fehlt in einem unter „Betrifft“ genannten Eintrag, Betrifft-Listen derselben ID weichen ab, ID steht in einem nicht genannten Eintrag, ID doppelt vergeben). **Hinweise** (Exit bleibt 0): offene Widersprüche und Unklarheiten (ID, betroffene Einträge); Einträge in `_uncategorized` mit der Aufforderung, sie zu kategorisieren. Exit 0, wenn keine Fehler. |
-| `brain recategorize` | Nur auf Anweisung des Nutzers. Varianten: `--rename <alt> <neu>` (Kategorie umbenennen), `--merge <von> <nach>` (zusammenlegen), `--move <eintrag> <kategorie>` (Eintrag samt Quellen, die nur er referenziert, verschieben – auch aus `_uncategorized` heraus). Verschiebt per `git mv`, passt alle `[[Links]]` (inkl. Verwandt, Betrifft), `sources`, `category` und `categories.yml` an, führt `brain index` aus. Inhalt der Originale bleibt identisch. |
+| `brain check` | Prüft das Brain und gibt einen Bericht in zwei Stufen aus. **Fehler** (→ Exit 1): ① `[[Links]]` in `wiki/` zeigen auf nicht existierende Dateien/Abschnitte; ② Pflichtfelder laut 4.3 fehlen, `category` ≠ Ordnername, `sources` existieren nicht; ③ Ordner unter `wiki/`/`archive/` weder in `categories.yml` noch `_uncategorized`; ④ Archiv-Integrität per Git verletzt (Datei unter `archive/` geändert oder gelöscht; Umbenennung mit Inhaltsänderung) – neue Dateien erlaubt; ⑤ Verwandt-Beziehung nicht symmetrisch; ⑥ offener Punkt unvollständig (ID fehlt in einem unter „Affects“ genannten Eintrag, Affects-Listen derselben ID weichen ab, ID steht in einem nicht genannten Eintrag, ID doppelt vergeben). **Hinweise** (Exit bleibt 0): offene Widersprüche und Unklarheiten (ID, betroffene Einträge); Einträge in `_uncategorized` mit der Aufforderung, sie zu kategorisieren. Exit 0, wenn keine Fehler. |
+| `brain recategorize` | Nur auf Anweisung des Nutzers. Varianten: `--rename <alt> <neu>` (Kategorie umbenennen), `--merge <von> <nach>` (zusammenlegen), `--move <eintrag> <kategorie>` (Eintrag samt Quellen, die nur er referenziert, verschieben – auch aus `_uncategorized` heraus). Verschiebt per `git mv`, passt alle `[[Links]]` (inkl. Related, Affects), `sources`, `category` und `categories.yml` an, führt `brain index` aus. Inhalt der Originale bleibt identisch. |
 
 ## 6. CLAUDE.md-Dateien
 
