@@ -1,7 +1,7 @@
 # Second Brain – Wissenskern – Design
 
 Datum: 2026-10-03
-Status: Entwurf zur Review (Revision 4)
+Status: Freigegeben (Revision 4, 2026-10-03)
 
 ## 1. Ziel & Rahmen
 
