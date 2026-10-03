@@ -15,7 +15,7 @@
 - Repo-Wurzel: `/mnt/f/second-brain` (= `F:\second-brain`); niemals `git push` – Commits sind erlaubt.
 - Node ≥ 22 für qmd; Skripte nutzen Node 24 (`v24.2.0` installiert) mit Type-Stripping: keine `enum`, keine Parameter-Properties, keine Namespaces; Importe mit `.ts`-Endung; Typ-Importe mit `type`.
 - Laufzeitabhängigkeit nur `yaml`; Dev: `typescript`, `@types/node`.
-- **Sprachregel:** Alles, was eine Maschine liest, ist Englisch (Code, CLI-Befehle/Flags, Datei-/Ordnernamen, Frontmatter-Felder, Log-Operationen, Marker `## Related`, `## Sources`, `[!warning] Conflict C-…`, `[!question] Unclear Q-…`, `Affects:`). Alles, was der Nutzer liest (Titel, Summary, Fließtext, Callout-Inhalt, CLI-Meldungen, Antworten), ist Deutsch.
+- **Sprachregel:** Alles, was eine Maschine liest, ist Englisch (Code, CLI-Befehle/Flags, Datei-/Ordnernamen, Frontmatter-Felder, Log-Operationen, Marker `## Related`, `## Sources`, `[!warning] Conflict C-…`, `[!question] Unclear Q-…`, `Affects:`). Alles, was der Nutzer liest (Titel, Summary, Fließtext, Callout-Inhalt, CLI-Meldungen, Antworten), ist Deutsch. Ausnahme: Anweisungsdateien für Claude (`CLAUDE.md`, `wiki/CLAUDE.md`, `.claude/commands/*.md`) sind Deutsch.
 - Markdown ist die einzige Wahrheit. `INDEX.md`, `graph.json` nur von `brain index`; `LOG.md` nur über `brain`. Alle drei nicht in Git.
 - `archive/`: Inhalt byte-identisch, nie ändern/löschen; einzige erlaubte Änderung: Verschieben per `brain recategorize`.
 - Kategorie-Slug: `^[a-z0-9][a-z0-9-]*$`; reservierte Pseudo-Kategorie `_uncategorized` (Anzeigename „Ohne Kategorie“), nicht in `categories.yml`.
@@ -3222,102 +3222,102 @@ Expected: `which` zeigt einen Pfad; `brain check` gibt `Keine Fehler.` aus (leer
 ~~~markdown
 # Second Brain – Workspace
 
-Personal knowledge base for work and personal knowledge. Markdown files are the single source of truth.
-Design and data contract: `docs/superpowers/specs/2026-10-03-second-brain-design.md` (section 4).
+Persönliche Wissensbasis für Job- und privates Wissen. Die Markdown-Dateien sind die einzige Wahrheit.
+Design und Datenvertrag: `docs/superpowers/specs/2026-10-03-second-brain-design.md` (Abschnitt 4).
 
 @INDEX.md
 
-## Layout
+## Aufbau
 
-- `inbox/` – raw notes waiting for `/ingest` (not in git)
-- `archive/<category>/YYYY/MM/` – original notes, byte-identical, never edited or deleted
-- `wiki/<category>/<entry>.md` – condensed knowledge entries; writing rules in `wiki/CLAUDE.md`
-- `categories.yml` – the only allowed categories; `_uncategorized` is the reserved fallback
-- `INDEX.md`, `graph.json` – derived by `brain index` (not in git)
-- `LOG.md` – append-only change log, written only through `brain` (not in git)
-- `scripts/` – the `brain` CLI (Node/TypeScript, tests: `npm --prefix scripts test`)
+- `inbox/` – Rohnotizen, die auf `/ingest` warten (nicht in Git)
+- `archive/<kategorie>/YYYY/MM/` – Originalnotizen, byte-identisch, nie ändern oder löschen
+- `wiki/<kategorie>/<eintrag>.md` – verdichtete Wissenseinträge; Schreibregeln in `wiki/CLAUDE.md`
+- `categories.yml` – die einzigen erlaubten Kategorien; `_uncategorized` ist der reservierte Auffangordner
+- `INDEX.md`, `graph.json` – abgeleitet von `brain index` (nicht in Git)
+- `LOG.md` – Änderungsprotokoll, nur anhängen, nur über `brain` (nicht in Git)
+- `scripts/` – das CLI `brain` (Node/TypeScript, Tests: `npm --prefix scripts test`)
 
-## Hard rules
+## Feste Regeln
 
-- Never edit `INDEX.md` or `graph.json`. Run `brain index`.
-- Never write `LOG.md` directly. Use `brain log`; the other `brain` commands log themselves.
-- Never change or delete anything in `archive/`. Moving only via `brain recategorize`.
-- Never create a category without explicit user approval. If none fits and none is approved, use `_uncategorized`.
-- Never run `git push`.
-- When the user dictates a note in the chat (outside `/ingest`), save it verbatim to `inbox/chat-note.md` (`chat-note-2.md`, … if taken) and run the `/ingest` flow.
-- Language: everything machine-read is English (code, CLI, file names, frontmatter keys, markers like `## Related`, `## Sources`, `Conflict C-…`, `Unclear Q-…`, `Affects:`). Everything the user reads (titles, summaries, prose, callout text, answers) is German.
+- `INDEX.md` und `graph.json` nie bearbeiten – `brain index` ausführen.
+- Nie direkt in `LOG.md` schreiben – `brain log` nutzen; die übrigen `brain`-Befehle protokollieren selbst.
+- In `archive/` nie etwas ändern oder löschen. Verschieben nur per `brain recategorize`.
+- Nie eine Kategorie ohne ausdrückliche Freigabe des Nutzers anlegen. Passt keine und wird keine freigegeben: `_uncategorized`.
+- Nie `git push` ausführen.
+- Diktiert der Nutzer im Chat eine Notiz (außerhalb von `/ingest`): wörtlich als `inbox/chat-note.md` speichern (`chat-note-2.md`, … falls belegt) und den `/ingest`-Ablauf ausführen.
+- Sprache: Was eine Maschine auswertet, ist Englisch (Code, CLI, Datei- und Ordnernamen, Frontmatter-Felder, die Marker `## Related`, `## Sources`, `Conflict C-…`, `Unclear Q-…`, `Affects:`). Was der Nutzer liest (Titel, Summary, Fließtext, Callout-Text, Antworten), ist Deutsch.
 
-## brain CLI (run from the repo root)
+## CLI `brain` (aus der Repo-Wurzel)
 
-| Command | Purpose |
+| Befehl | Zweck |
 |---|---|
-| `brain archive <inbox-file> --category <slug>` | move a note into the archive, prints the archive path |
-| `brain remember --category <slug> --title <t> --summary <s> --source <archive-path> [--related <entry> …] [--tags a,b] < body` | create a new entry and rebuild the index |
-| `brain link <entry> <entry> […]` / `brain link --remove …` | set/remove symmetric `## Related` links |
-| `brain log <op> <target> [<description>]` | append to `LOG.md` (ops: archive, create, update, link, unlink, conflict, resolve, recategorize, category, ingest) |
-| `brain index` | rebuild `INDEX.md` and `graph.json` |
-| `brain check` | errors (exit 1) and hints (open points, uncategorized entries) |
-| `brain recategorize --rename a b \| --merge a b \| --move <entry> <category>` | only when the user asks |
+| `brain archive <inbox-datei> --category <slug>` | Notiz ins Archiv verschieben, gibt den Archivpfad aus |
+| `brain remember --category <slug> --title <t> --summary <s> --source <archivpfad> [--related <eintrag> …] [--tags a,b] < body` | neuen Eintrag anlegen und Index neu erzeugen |
+| `brain link <eintrag> <eintrag> […]` / `brain link --remove …` | gegenseitige `## Related`-Links setzen/entfernen |
+| `brain log <op> <ziel> [<beschreibung>]` | Zeile an `LOG.md` anhängen (Ops: archive, create, update, link, unlink, conflict, resolve, recategorize, category, ingest) |
+| `brain index` | `INDEX.md` und `graph.json` neu erzeugen |
+| `brain check` | Fehler (Exit 1) und Hinweise (offene Punkte, Einträge ohne Kategorie) |
+| `brain recategorize --rename a b \| --merge a b \| --move <eintrag> <kategorie>` | nur auf Anweisung des Nutzers |
 
-## Brain-first protocol (retrieval ladder)
+## Brain-First-Protokoll (Suchleiter)
 
-For every knowledge question, follow exactly:
+Für jede Wissensfrage genau so vorgehen:
 
-1. Derive keywords from the question.
-2. Score candidates with `INDEX.md` and qmd `query` on collection `wiki` – do NOT open files yet. Use collection `archive` or both only when explicitly requested.
-3. Open exactly ONE top file.
-4. Read only the relevant section (Referenz-Map and headings).
-5. Follow at most ONE pointer (`[[link]]`, a `## Related` entry or a `sources` path).
-6. Answer only from what was read, with `[[…]]` source links. If that is not enough: "Dazu steht nichts in deinem Brain."
+1. Keywords aus der Frage bestimmen.
+2. Kandidaten mit `INDEX.md` und qmd `query` auf Collection `wiki` scoren – noch KEINE Dateien öffnen. Collection `archive` oder beide nur, wenn ausdrücklich verlangt.
+3. Genau EINE Top-Datei öffnen.
+4. Nur den relevanten Abschnitt lesen (Referenz-Map und Überschriften nutzen).
+5. Höchstens EINEM Pointer folgen (`[[Link]]`, ein Eintrag aus `## Related` oder ein `sources`-Pfad).
+6. Nur aus dem Gelesenen antworten, mit `[[…]]`-Quellenlinks. Reicht das nicht: „Dazu steht nichts in deinem Brain.“
 
-Writing entries: see `wiki/CLAUDE.md`.
+Einträge schreiben: siehe `wiki/CLAUDE.md`.
 ~~~
 
 - [ ] **Step 3: `wiki/CLAUDE.md` schreiben**
 
 `wiki/CLAUDE.md`:
 ~~~markdown
-# Writing rules for knowledge entries
+# Schreibregeln für Wissenseinträge
 
-Applies to every file in `wiki/<category>/`. Format: spec section 4.3.
+Gilt für jede Datei in `wiki/<kategorie>/`. Format: Spec Abschnitt 4.3.
 
-## Creating and linking
+## Anlegen und verknüpfen
 
-- Create new entries ONLY with `brain remember`. The body comes via stdin, without the `# Title` heading and without `## Sources` (the CLI writes both).
-- Set or remove relations ONLY with `brain link a b [c …]` / `brain link --remove a b`. Never edit `## Related` by hand.
-- After every new or changed entry, look for related entries (INDEX.md, qmd `query` on `wiki`) and link them – also across categories.
-- Exactly one category per entry; if unclear, choose the main topic and link the rest.
+- Neue Einträge NUR mit `brain remember` anlegen. Der Body kommt über stdin, ohne `# Titel`-Überschrift und ohne `## Sources` (beides schreibt das CLI).
+- Beziehungen NUR mit `brain link a b [c …]` / `brain link --remove a b` setzen oder entfernen. `## Related` nie von Hand bearbeiten.
+- Nach jedem neuen oder geänderten Eintrag verwandte Einträge suchen (INDEX.md, qmd `query` auf `wiki`) und verknüpfen – auch kategorieübergreifend.
+- Genau eine Kategorie pro Eintrag; bei Unklarheit gewinnt das Hauptthema, der Rest wird verlinkt.
 
-## Condense, don't append
+## Verdichten statt anhängen
 
-- Integrate new information into the existing text; merge duplicates; replace outdated statements (the old source stays in `sources`).
-- No "Update vom …" sections, no changelogs inside entries.
-- One entry = one topic. If an entry grows large or covers several topics, propose a split to the user.
-- When editing an entry: add the new archive path to `sources` (with `.md`) and to `## Sources` (without `.md`), set `updated` to today, adjust `summary` if needed (exactly one German sentence, one line).
+- Neues in den bestehenden Text einarbeiten, Doppeltes zusammenführen, Veraltetes ersetzen (die alte Quelle bleibt in `sources`).
+- Keine „Update vom …“-Abschnitte, keine Änderungshistorie im Eintrag.
+- Ein Eintrag = ein Thema. Wird ein Eintrag groß oder behandelt mehrere Themen: Aufteilung beim Nutzer vorschlagen.
+- Beim Bearbeiten: neuen Archivpfad in `sources` (mit `.md`) und unter `## Sources` (ohne `.md`) ergänzen, `updated` auf heute setzen, `summary` bei Bedarf anpassen (genau ein deutscher Satz, eine Zeile).
 
-## Conflicts and unclear points
+## Widersprüche und Unklarheiten
 
-- First ask the user. Only if it cannot be resolved now, add a callout directly below the `# Title` in EVERY affected entry, with identical ID and identical `Affects:` line:
+- Zuerst den Nutzer fragen. Nur wenn es jetzt nicht klärbar ist: direkt unter dem `# Titel` in JEDEM betroffenen Eintrag einen Callout setzen, mit identischer ID und identischer `Affects:`-Zeile:
 
       > [!warning] Conflict C-YYYYMMDD-N
       > Affects: [[wiki/a/x]], [[wiki/b/y]]
-      > <German description with source links>
+      > <deutsche Beschreibung mit Quellenlinks>
 
-  Use `> [!question] Unclear Q-YYYYMMDD-N` for unclear points. N counts up per day; check that the ID is unused: `grep -rn "C-YYYYMMDD-" wiki/`.
-- Resolving: fix the content and remove the callout with that ID from ALL affected entries.
-- `brain check` enforces consistency.
+  Für Unklarheiten `> [!question] Unclear Q-YYYYMMDD-N`. N zählt pro Tag hoch; vorher prüfen, dass die ID frei ist: `grep -rn "C-YYYYMMDD-" wiki/`.
+- Auflösen: Inhalt korrigieren und den Callout mit dieser ID aus ALLEN betroffenen Einträgen entfernen.
+- `brain check` erzwingt die Konsistenz.
 
-## Logging
+## Protokollieren
 
-- After each own edit of an entry: `brain log update <entry> "<German description>"`.
-- New open point: `brain log conflict <id> "<description>"`; resolved: `brain log resolve <id> "<description>"`.
-- Approved new category: `brain log category <slug> "<name>"`.
+- Nach jeder eigenen Änderung an einem Eintrag: `brain log update <eintrag> "<Beschreibung>"`.
+- Neuer offener Punkt: `brain log conflict <id> "<Beschreibung>"`; aufgelöst: `brain log resolve <id> "<Beschreibung>"`.
+- Freigegebene neue Kategorie: `brain log category <slug> "<Name>"`.
 
-## Content
+## Inhalt
 
-- German prose, technical terms in the original language.
-- Never copy secrets (passwords, tokens, keys) into entries – tell the user instead.
-- Links always as full path from the repo root without `.md`: `[[wiki/category/entry]]`, `[[wiki/category/entry#Heading]]`.
+- Deutscher Text, Fachbegriffe im Original.
+- Nie Geheimnisse (Passwörter, Tokens, Keys) übernehmen – stattdessen den Nutzer darauf hinweisen.
+- Links immer als vollständiger Pfad ab Repo-Wurzel ohne `.md`: `[[wiki/kategorie/eintrag]]`, `[[wiki/kategorie/eintrag#Überschrift]]`.
 ~~~
 
 - [ ] **Step 4: `.claude/commands/ingest.md` schreiben**
@@ -3325,48 +3325,48 @@ Applies to every file in `wiki/<category>/`. Format: spec section 4.3.
 `.claude/commands/ingest.md`:
 ~~~markdown
 ---
-description: Process all notes in inbox/ into the wiki
-argument-hint: [note text to add first]
+description: Alle Notizen aus inbox/ ins Wiki einarbeiten
+argument-hint: [Notiztext, der vorher aufgenommen wird]
 ---
 
-Process the inbox following `CLAUDE.md` and `wiki/CLAUDE.md`. Talk to the user in German.
+Verarbeite die Inbox gemäß `CLAUDE.md` und `wiki/CLAUDE.md`.
 
-If `$ARGUMENTS` is not empty, first save it verbatim as `inbox/chat-note.md` (`chat-note-2.md`, … if taken); `brain archive` adds the timestamp later.
+Ist `$ARGUMENTS` nicht leer: zuerst wörtlich als `inbox/chat-note.md` speichern (`chat-note-2.md`, … falls belegt); den Zeitstempel ergänzt später `brain archive`.
 
-## 1. Preflight – stop on failure
+## 1. Vorprüfung – bei Fehlschlag abbrechen
 
-1. `git status --porcelain` must be empty. Otherwise stop and show the output.
-2. `brain check` must exit 0. Otherwise stop and show the report.
+1. `git status --porcelain` muss leer sein. Sonst abbrechen und die Ausgabe zeigen.
+2. `brain check` muss mit Exit 0 enden. Sonst abbrechen und den Bericht zeigen.
 3. `brain index`
-4. `ls -tr inbox/` (ignore `.gitkeep`). Empty → say "Nichts zu tun." and stop. Files other than `.md`/`.txt` stay in the inbox; mention them.
+4. `ls -tr inbox/` (`.gitkeep` ignorieren). Leer → „Nichts zu tun.“ und Ende. Andere Formate als `.md`/`.txt` bleiben in der Inbox; darauf hinweisen.
 
-## 2. Per note, oldest first
+## 2. Pro Notiz, älteste zuerst
 
-1. Read the note. Choose exactly one category from `categories.yml` (main topic wins).
-   If none fits: stop and ask the user (AskUserQuestion) – propose a new category (slug, German name, one-sentence description) and the best existing one.
-   - New category approved → append it to `categories.yml`, then `brain log category <slug> "<name>"`.
-   - Nothing approved → `_uncategorized`.
-2. `brain archive inbox/<file> --category <slug>` → keep the printed archive path.
-3. Find related knowledge with steps 1–2 of the retrieval ladder (INDEX.md + qmd `query` on `wiki`). If qmd is unavailable, continue with INDEX.md and grep and tell the user.
-4. Integrate according to `wiki/CLAUDE.md`:
-   - existing topic → edit the entry (condense), add the source, then `brain log update …`
-   - new topic → `brain remember --category … --title "…" --summary "…" --source <archive-path> [--related …] <<'EOF'` … `EOF`
-   - relations → `brain link …`
-5. Conflicts or unclear points → ask the user; if unresolved, add callouts to all affected entries and `brain log conflict …`.
-6. Secrets → do not copy them; tell the user.
+1. Notiz lesen. Genau eine Kategorie aus `categories.yml` wählen (Hauptthema gewinnt).
+   Passt keine: anhalten und den Nutzer fragen (AskUserQuestion) – neue Kategorie vorschlagen (Slug, deutscher Name, ein Satz Beschreibung) sowie die bestpassende bestehende.
+   - Neue Kategorie freigegeben → in `categories.yml` ergänzen, dann `brain log category <slug> "<Name>"`.
+   - Nichts freigegeben → `_uncategorized`.
+2. `brain archive inbox/<datei> --category <slug>` → ausgegebenen Archivpfad merken.
+3. Verwandtes Wissen mit Schritt 1–2 der Suchleiter finden (INDEX.md + qmd `query` auf `wiki`). Ist qmd nicht erreichbar: mit INDEX.md und grep weiterarbeiten und den Nutzer informieren.
+4. Einarbeiten gemäß `wiki/CLAUDE.md`:
+   - bestehendes Thema → Eintrag verdichtend bearbeiten, Quelle ergänzen, dann `brain log update …`
+   - neues Thema → `brain remember --category … --title "…" --summary "…" --source <archivpfad> [--related …] <<'EOF'` … `EOF`
+   - Beziehungen → `brain link …`
+5. Widersprüche oder Unklarheiten → Nutzer fragen; ungeklärt → Callouts in allen betroffenen Einträgen und `brain log conflict …`.
+6. Geheimnisse → nicht übernehmen, Nutzer informieren.
 
-## 3. Finish
+## 3. Abschluss
 
 1. `brain index`
-2. `brain check` – on errors caused in this run: fix them. Otherwise stop WITHOUT commit and show the report.
+2. `brain check` – Fehler, die in diesem Lauf entstanden sind, beheben. Sonst OHNE Commit abbrechen und den Bericht zeigen.
 3. `qmd update && qmd embed`
-4. Summary for the user: new entries, changed entries, new links, hints from `brain check` (open points, uncategorized entries).
-5. `brain log ingest "<n> Notizen" "<categories>"`
-6. `git add -A && git commit -m "ingest: <n> Notizen – <topics>"`. Never push.
+4. Zusammenfassung für den Nutzer: neue Einträge, geänderte Einträge, neue Verknüpfungen, Hinweise aus `brain check` (offene Punkte, Einträge ohne Kategorie).
+5. `brain log ingest "<n> Notizen" "<Kategorien>"`
+6. `git add -A && git commit -m "ingest: <n> Notizen – <Themen>"`. Niemals push.
 
-## Recovery after an abort
+## Wiederaufsetzen nach Abbruch
 
-Explain to the user: the original is already archived (not committed); `git status` / `git diff` show the state; to retry run `git restore wiki/ categories.yml`, remove new entries (`git clean -n wiki/` shows them, `git clean -f wiki/` deletes them), move the archived file back to `inbox/`, run `brain index`.
+Dem Nutzer erklären: Das Original ist bereits archiviert (nicht committet); `git status` / `git diff` zeigen den Stand. Für einen neuen Versuch: `git restore wiki/ categories.yml`, neue Einträge entfernen (`git clean -n wiki/` zeigt sie, `git clean -f wiki/` löscht sie), die archivierte Datei zurück nach `inbox/` verschieben, `brain index`.
 ~~~
 
 - [ ] **Step 5: `.claude/commands/ask.md` schreiben**
@@ -3374,32 +3374,32 @@ Explain to the user: the original is already archived (not committed); `git stat
 `.claude/commands/ask.md`:
 ~~~markdown
 ---
-description: Ask the second brain – answers only from the brain
+description: Das Second Brain befragen – Antworten nur aus dem Brain
 argument-hint: [--archive | --all] <Frage>
 ---
 
-Answer the question using ONLY the brain. Read-only: no `brain index`, no `brain check`, no `qmd update`, no file changes, no log entries.
+Beantworte die Frage AUSSCHLIESSLICH aus dem Brain. Nur lesen: kein `brain index`, kein `brain check`, kein `qmd update`, keine Dateiänderungen, keine Log-Einträge.
 
-Input: `$ARGUMENTS`
+Eingabe: `$ARGUMENTS`
 
-- starts with `--archive` → search collection `archive` only
-- starts with `--all` → search collections `wiki` and `archive`
-- otherwise → collection `wiki` (switch only if the question explicitly asks for the archive or for everything)
+- beginnt mit `--archive` → nur Collection `archive` durchsuchen
+- beginnt mit `--all` → Collections `wiki` und `archive`
+- sonst → Collection `wiki` (nur wechseln, wenn die Frage ausdrücklich nach dem Archiv oder nach allem fragt)
 
-If `INDEX.md` does not exist, tell the user to run `brain index` once and stop.
+Existiert `INDEX.md` nicht: den Nutzer bitten, einmal `brain index` auszuführen, und abbrechen.
 
-Follow the retrieval ladder from `CLAUDE.md` exactly:
+Die Suchleiter aus `CLAUDE.md` exakt befolgen:
 
-1. Derive keywords.
-2. Score with `INDEX.md` and qmd `query` (chosen collection) without opening files.
-3. Open exactly ONE top file.
-4. Read only the relevant section.
-5. Follow at most ONE pointer.
-6. Answer.
+1. Keywords bestimmen.
+2. Mit `INDEX.md` und qmd `query` (gewählte Collection) scoren, ohne Dateien zu öffnen.
+3. Genau EINE Top-Datei öffnen.
+4. Nur den relevanten Abschnitt lesen.
+5. Höchstens EINEM Pointer folgen.
+6. Antworten.
 
-Answer in German. Every statement gets a `[[…]]` source link. For answers from the archive, say that originals may be outdated by the wiki.
-If nothing fits: answer "Dazu steht nichts in deinem Brain." and optionally name nearby entries from `INDEX.md`. Never fill gaps with general knowledge.
-If qmd is unavailable, say so instead of silently answering with less.
+Antwort auf Deutsch, jede Aussage mit `[[…]]`-Quellenlink. Bei Antworten aus dem Archiv darauf hinweisen, dass Originale durch das Wiki überholt sein können.
+Passt nichts: „Dazu steht nichts in deinem Brain.“ und ggf. thematisch nahe Einträge aus `INDEX.md` nennen. Lücken nie mit Allgemeinwissen füllen.
+Ist qmd nicht erreichbar: das sagen, statt still schlechter zu antworten.
 ~~~
 
 - [ ] **Step 6: Obsidian-Linkformat vorbelegen**

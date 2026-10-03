@@ -31,7 +31,7 @@ Diese Spec umfasst nur den **Wissenskern**: Ablage, Kategorien, Verarbeitung, In
 - Antworten strikt aus dem Brain, mit Quellen; fehlendes Wissen wird benannt.
 - Obsidian-kompatibel: `[[Wiki-Links]]`, YAML-Frontmatter, Callouts.
 - Einträge auf Deutsch, Fachbegriffe im Original.
-- **Sprachregel:** Alles, was eine Maschine liest, ist Englisch – Code, CLI-Befehle und Flags (`/ask --archive`), Datei- und Ordnernamen (`_uncategorized`), Frontmatter-Felder, Log-Operationen und die vom CLI ausgewerteten Marker in Einträgen (`## Related`, `## Sources`, `[!warning] Conflict C-…`, `[!question] Unclear Q-…`, `Affects:`). Alles, was der Nutzer liest (Titel, Summary, Fließtext, Callout-Inhalt), ist Deutsch.
+- **Sprachregel:** Alles, was eine Maschine liest, ist Englisch – Code, CLI-Befehle und Flags (`/ask --archive`), Datei- und Ordnernamen (`_uncategorized`), Frontmatter-Felder, Log-Operationen und die vom CLI ausgewerteten Marker in Einträgen (`## Related`, `## Sources`, `[!warning] Conflict C-…`, `[!question] Unclear Q-…`, `Affects:`). Alles, was der Nutzer liest (Titel, Summary, Fließtext, Callout-Inhalt), ist Deutsch. Ausnahme: Anweisungsdateien für Claude (`CLAUDE.md`, `wiki/CLAUDE.md`, `.claude/commands/*.md`) sind Deutsch; die darin genannten Marker und Befehle bleiben Englisch.
 - Brain-Ordner auf Windows: `F:\second-brain` = `/mnt/f/second-brain`, Git-Repo, niemals push durch Claude.
 - Deterministische Werkzeuge als Node/TypeScript-CLI `brain` – ohne Modellaufruf.
 - Suche mit [qmd](https://github.com/tobi/qmd), global in WSL, multilinguales Embedding (Qwen3), angebunden per Claude-Code-Plugin; getrennte Collections für Wiki und Archiv, einzeln oder gemeinsam durchsuchbar.
