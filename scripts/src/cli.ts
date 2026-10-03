@@ -9,7 +9,7 @@ import { runIndex } from './indexer.ts';
 import { initBrain, updateBrainConfig } from './init.ts';
 import { linkEntries } from './link.ts';
 import { appendLog, isLogOp } from './log.ts';
-import { brainRoot } from './paths.ts';
+import { brainRoot, callerDir } from './paths.ts';
 import { isQmdInstalled, runQmd, setupQmd } from './qmd.ts';
 import { mergeCategory, moveEntry, renameCategory } from './recategorize.ts';
 import { remember } from './remember.ts';
@@ -78,7 +78,7 @@ Examples:
 
 /** Resolves a path argument relative to the directory the user called the command from. */
 function callerPath(path: string): string {
-    return resolve(process.env.INIT_CWD ?? process.cwd(), path);
+    return resolve(callerDir(), path);
 }
 
 function readStdin(): string {
@@ -250,8 +250,12 @@ function run(argv: string[], now: Date): number {
             const created = initBrain(callerPath(rest[0]));
             console.log(`Brain angelegt: ${created} (Git-Repo ohne Remote, Push-Schutz aktiv)`);
             if (isQmdInstalled()) {
-                setupQmd(created);
-                console.log('qmd-Index eingerichtet.');
+                try {
+                    setupQmd(created);
+                    console.log('qmd-Index eingerichtet.');
+                } catch (error) {
+                    console.log(`Hinweis: qmd-Einrichtung fehlgeschlagen (${(error as Error).message}) – später im Brain „brain qmd setup“ ausführen.`);
+                }
             } else {
                 console.log('Hinweis: qmd nicht gefunden – später im Brain „brain qmd setup“ ausführen.');
             }

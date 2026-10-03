@@ -50,10 +50,17 @@ export function initBrain(target: string, templateDir = TEMPLATE_DIR): string {
     if (existsSync(join(root, 'categories.yml'))) {
         throw new Error(`Dort existiert bereits ein Brain: ${root}`);
     }
-    mkdirSync(root, { recursive: true });
-    if (!existsSync(join(root, '.git'))) {
-        git(root, ['init', '-q']);
+    if (existsSync(root) && readdirSync(root).length > 0) {
+        throw new Error(`Zielordner ist nicht leer: ${root} – brain init nur in einen neuen oder leeren Ordner`);
     }
+    try {
+        execFileSync('git', ['var', 'GIT_AUTHOR_IDENT'], { stdio: 'pipe' });
+        execFileSync('git', ['var', 'GIT_COMMITTER_IDENT'], { stdio: 'pipe' });
+    } catch {
+        throw new Error('Git-Identität fehlt – zuerst git config --global user.name "…" und user.email "…" setzen');
+    }
+    mkdirSync(root, { recursive: true });
+    git(root, ['init', '-q']);
     updateBrainConfig(root, templateDir);
     for (const dir of ['inbox', 'archive', 'wiki']) {
         mkdirSync(join(root, dir), { recursive: true });

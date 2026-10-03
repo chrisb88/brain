@@ -34,7 +34,7 @@ Mehrere Brains (verschiedene Daten-Repos) sind möglich; Wechseln heißt: `brain
 `brainRoot()` bestimmt das Brain in dieser Reihenfolge:
 
 1. Umgebungsvariable `BRAIN_ROOT`, falls gesetzt.
-2. Vom aktuellen Verzeichnis (`INIT_CWD` bzw. `cwd`) aufwärts das erste Verzeichnis mit einer Datei `categories.yml`.
+2. Vom aktuellen Verzeichnis aufwärts (`cwd`; `INIT_CWD` nur innerhalb von npm-Scripts, erkennbar an `npm_lifecycle_event` – sonst könnte ein von npm geerbtes `INIT_CWD` ein falsches Brain auswählen; danach `CLAUDE_PROJECT_DIR`) das erste Verzeichnis mit einer Datei `categories.yml`.
 3. Sonst Fehler: „Kein Brain gefunden – im Daten-Repo ausführen oder BRAIN_ROOT setzen.“
 
 Der bisherige Standard (`scripts/../..`) entfällt. `brain help` und `brain init` brauchen kein Brain.
@@ -43,14 +43,16 @@ Der bisherige Standard (`scripts/../..`) entfällt. `brain help` und `brain init
 
 **`brain init <pfad>`** – neues Daten-Repo:
 
-1. Fehler, wenn `<pfad>/categories.yml` bereits existiert.
-2. Ordner anlegen (falls nötig); falls noch kein Git-Repo: `git init`.
-3. Alle Dateien aus `template/` kopieren; leere Ordner `inbox/` (mit `.gitkeep`), `archive/`, `wiki/` anlegen.
-4. `categories.yml` mit leerer Liste über `saveCategories` (inkl. Kommentar-Kopf).
-5. Push-Schutz installieren (Abschnitt 5).
-6. `brain index`.
-7. Erster Commit `init: second brain data repository`.
-8. Ausgabe: Pfad und nächste Schritte (qmd-Collections, Claude Code dort starten).
+1. Fehler, wenn `<pfad>/categories.yml` bereits existiert oder der Ordner existiert und nicht leer ist (auch bestehende Git-Repos werden abgelehnt – keine fremden Dateien, Remotes oder Hooks übernehmen).
+2. Fehler, wenn keine Git-Identität konfiguriert ist (`git var GIT_AUTHOR_IDENT`) – geprüft, bevor etwas geschrieben wird.
+3. Ordner anlegen und `git init`.
+4. Alle Dateien aus `template/` kopieren; leere Ordner `inbox/` (mit `.gitkeep`), `archive/`, `wiki/` anlegen.
+5. `categories.yml` mit leerer Liste über `saveCategories` (inkl. Kommentar-Kopf).
+6. Push-Schutz installieren (Abschnitt 5).
+7. `brain index`.
+8. Erster Commit `init: second brain data repository`.
+9. qmd-Index einrichten (Abschnitt 6); schlägt das fehl oder fehlt qmd, nur Hinweis – `init` bleibt erfolgreich.
+10. Ausgabe: Pfad und nächste Schritte (qmd-Collections, Claude Code dort starten).
 
 **`brain init --update`** – im bestehenden Daten-Repo (Wurzel laut Abschnitt 3):
 
@@ -60,7 +62,7 @@ Der bisherige Standard (`scripts/../..`) entfällt. `brain help` und `brain init
 ## 5. Push-Schutz
 
 1. Das Daten-Repo hat kein Remote.
-2. Hook `.git/hooks/pre-push` (ausführbar), lehnt jeden Push ab:
+2. Hook `pre-push` (ausführbar) im gemeinsamen Hook-Verzeichnis (`<git-common-dir>/hooks`, gilt auch für `git worktree`), `core.hooksPath` lokal auf diesen **absoluten** Pfad gesetzt; lehnt jeden Push ab:
    ```sh
    #!/bin/sh
    # second-brain: this repository must never be pushed.
@@ -69,7 +71,8 @@ Der bisherige Standard (`scripts/../..`) entfällt. `brain help` und `brain init
    ```
 3. `brain check` meldet als **Fehler**:
    - wenn `git remote` mindestens ein Remote liefert,
-   - wenn `.git/hooks/pre-push` fehlt oder die Markierungszeile `# second-brain: this repository must never be pushed.` nicht enthält.
+   - wenn `core.hooksPath` nicht auf das gemeinsame Hook-Verzeichnis zeigt (z. B. nach Umbenennen des Ordners – `brain init --update` behebt das),
+   - wenn der Hook fehlt oder die Markierungszeile `# second-brain: this repository must never be pushed.` nicht enthält.
 
    Ohne Git-Repo bleibt es beim bisherigen Hinweis.
 

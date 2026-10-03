@@ -47,5 +47,5 @@ test('installPushGuard is idempotent and writes the marker', () => {
     initGit(root);
     installPushGuard(root);
     assert.ok(readFileSync(hookPath(root), 'utf8').includes(PUSH_GUARD_MARKER));
-    assert.equal(git(root, 'config', '--local', 'core.hooksPath').trim(), '.git/hooks');
+    assert.equal(git(root, 'config', '--local', 'core.hooksPath').trim(), join(git(root, 'rev-parse', '--path-format=absolute', '--git-common-dir').trim(), 'hooks'));
 });

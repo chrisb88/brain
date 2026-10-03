@@ -22,8 +22,14 @@ export function findBrainRoot(starts: string[], envRoot: string | undefined): st
     return null;
 }
 
+/** Directory the user called brain from: INIT_CWD only inside npm scripts (npm sets it for all children). */
+export function callerDir(): string {
+    const initCwd = process.env.INIT_CWD;
+    return process.env.npm_lifecycle_event !== undefined && initCwd !== undefined && initCwd !== '' ? initCwd : process.cwd();
+}
+
 export function brainRoot(): string {
-    const starts = [process.env.INIT_CWD ?? process.cwd(), process.env.CLAUDE_PROJECT_DIR]
+    const starts = [callerDir(), process.env.CLAUDE_PROJECT_DIR]
         .filter((start): start is string => start !== undefined && start !== '');
     const root = findBrainRoot(starts, process.env.BRAIN_ROOT);
     if (root === null) {

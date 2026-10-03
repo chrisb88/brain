@@ -16,13 +16,18 @@ function git(root: string, args: string[]): string {
     return execFileSync('git', ['-C', root, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 }
 
-function hookFile(root: string): string {
-    return join(git(root, ['rev-parse', '--absolute-git-dir']), 'hooks', 'pre-push');
+/** Hooks directory shared by the main checkout and all linked worktrees. */
+function hooksDir(root: string): string {
+    return join(git(root, ['rev-parse', '--path-format=absolute', '--git-common-dir']), 'hooks');
 }
 
-/** Installs a pre-push hook that rejects every push and pins core.hooksPath to .git/hooks. */
+function hookFile(root: string): string {
+    return join(hooksDir(root), 'pre-push');
+}
+
+/** Installs a pre-push hook that rejects every push and pins core.hooksPath to the absolute shared hooks dir. */
 export function installPushGuard(root: string): void {
-    git(root, ['config', '--local', 'core.hooksPath', '.git/hooks']);
+    git(root, ['config', '--local', 'core.hooksPath', hooksDir(root)]);
     const file = hookFile(root);
     mkdirSync(join(file, '..'), { recursive: true });
     writeFileSync(file, HOOK, 'utf8');
@@ -41,7 +46,7 @@ export function pushGuardErrors(root: string): string[] {
     } catch {
         hooksPath = '';
     }
-    if (hooksPath !== '' && hooksPath !== '.git/hooks') {
+    if (hooksPath !== hooksDir(root)) {
         errors.push(`core.hooksPath zeigt auf „${hooksPath}“ – Push-Schutz wäre wirkungslos (brain init --update ausführen)`);
     }
     const file = hookFile(root);
