@@ -20,7 +20,7 @@ Design und Datenvertrag: `docs/superpowers/specs/2026-10-03-second-brain-design.
 - `INDEX.md` und `graph.json` nie bearbeiten – `brain index` ausführen.
 - Nie direkt in `LOG.md` schreiben – `brain log` nutzen; die übrigen `brain`-Befehle protokollieren selbst.
 - In `archive/` nie etwas ändern oder löschen. Verschieben nur per `brain recategorize`.
-- Nie eine Kategorie ohne ausdrückliche Freigabe des Nutzers anlegen. Passt keine und wird keine freigegeben: `_uncategorized`.
+- Nie eine Kategorie ohne ausdrückliche Freigabe des Nutzers anlegen; angelegt wird nur mit `brain category add`, nie durch direktes Bearbeiten von `categories.yml`. Passt keine und wird keine freigegeben: `_uncategorized`.
 - Nie `git push` ausführen.
 - Diktiert der Nutzer im Chat eine Notiz (außerhalb von `/ingest`): wörtlich als `inbox/chat-note.md` speichern (`chat-note-2.md`, … falls belegt) und den `/ingest`-Ablauf ausführen.
 - Sprache: Was eine Maschine auswertet, ist Englisch (Code, CLI, Datei- und Ordnernamen, Frontmatter-Felder, die Marker `## Related`, `## Sources`, `Conflict C-…`, `Unclear Q-…`, `Affects:`). Was der Nutzer liest (Titel, Summary, Fließtext, Callout-Text, Antworten), ist Deutsch.
@@ -35,7 +35,10 @@ Design und Datenvertrag: `docs/superpowers/specs/2026-10-03-second-brain-design.
 | `brain log <op> <ziel> [<beschreibung>]` | Zeile an `LOG.md` anhängen (Ops: archive, create, update, link, unlink, conflict, resolve, recategorize, category, ingest) |
 | `brain index` | `INDEX.md` und `graph.json` neu erzeugen |
 | `brain check` | Fehler (Exit 1) und Hinweise (offene Punkte, Einträge ohne Kategorie) |
+| `brain category add <slug> --name <name> [--description <text>]` | neue Kategorie registrieren – nur nach Freigabe durch den Nutzer |
+| `brain category list` | Kategorien mit Anzahl der Einträge anzeigen |
 | `brain recategorize --rename a b \| --merge a b \| --move <eintrag> <kategorie>` | nur auf Anweisung des Nutzers |
+| `brain help` | Übersicht aller Befehle (englisch) |
 
 ## Brain-First-Protokoll (Suchleiter)
 

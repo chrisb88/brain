@@ -32,7 +32,7 @@ Gilt für jede Datei in `wiki/<kategorie>/`. Format: Spec Abschnitt 4.3.
 
 - Nach jeder eigenen Änderung an einem Eintrag: `brain log update <eintrag> "<Beschreibung>"`.
 - Neuer offener Punkt: `brain log conflict <id> "<Beschreibung>"`; aufgelöst: `brain log resolve <id> "<Beschreibung>"`.
-- Freigegebene neue Kategorie: `brain log category <slug> "<Name>"`.
+- Neue Kategorien protokolliert `brain category add` selbst.
 
 ## Inhalt
 

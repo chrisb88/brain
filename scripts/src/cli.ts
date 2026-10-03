@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { archiveNote } from './archive.ts';
+import { addCategory, listCategories } from './category.ts';
 import { checkBrain } from './check.ts';
 import { runIndex } from './indexer.ts';
 import { linkEntries } from './link.ts';
@@ -11,7 +12,53 @@ import { brainRoot } from './paths.ts';
 import { mergeCategory, moveEntry, renameCategory } from './recategorize.ts';
 import { remember } from './remember.ts';
 
-const USAGE = 'Verwendung: brain <archive|remember|link|log|index|check|recategorize> …';
+const HELP = `brain – command line tool for the second brain knowledge base
+
+Usage: brain <command> [options]
+
+Run it from the repository root. Entries are addressed as wiki/<category>/<entry>,
+sources as archive/<category>/YYYY/MM/<file> (".md" is optional).
+
+Commands:
+  archive <inbox-file> --category <slug>
+      Move a note from inbox/ to archive/<category>/YYYY/MM/ without changing its
+      content. Prints the new archive path.
+  remember --category <slug> --title <title> --summary <sentence> --source <archive-path>
+           [--source <archive-path> …] [--tags a,b] [--related <entry> …]  < body.md
+      Create a new wiki entry (body from stdin), link related entries on both sides
+      and rebuild the index.
+  link <entry> <entry> [<entry> …] [--remove]
+      Add (or remove) symmetric "## Related" links between all given entries.
+  category add <slug> --name <name> [--description <text>]
+      Register a new category in categories.yml. Only with the user's approval.
+  category list
+      List all categories with their number of entries.
+  recategorize --rename <old> <new> | --merge <from> <to> | --move <entry> <category>
+      Rename or merge categories, or move an entry to another category. Rewrites
+      links; archive files keep their exact content.
+  index
+      Rebuild INDEX.md and graph.json from the markdown files.
+  check
+      Validate the brain. Errors exit with 1; hints list open conflicts/unclear
+      points and uncategorized entries.
+  log <op> <target> [<description>]
+      Append a line to LOG.md. Ops: archive, create, update, link, unlink,
+      conflict, resolve, recategorize, category, ingest.
+  help
+      Show this help (also: --help, -h, no arguments).
+
+Examples:
+  brain archive inbox/ingress-notes.md --category tech
+  brain remember --category tech --title "Kubernetes Ingress" --summary "TLS setup for the ingress controller." \\
+      --source archive/tech/2026/10/2026-10-03-1530-ingress-notes --related wiki/tech/azure-aks <<'EOF'
+  The NGINX ingress controller terminates TLS with certificates from cert-manager.
+  EOF
+  brain link wiki/tech/kubernetes-ingress wiki/tech/azure-aks
+  brain category add travel --name "Urlaub" --description "Reisen, Ausflüge, Urlaubsplanung."
+  brain category list
+  brain recategorize --move wiki/_uncategorized/tax-idea finance
+  brain index && brain check
+  brain log update wiki/tech/kubernetes-ingress "TLS section condensed"`;
 
 /** Resolves a path argument relative to the directory the user called the command from. */
 function callerPath(path: string): string {
@@ -25,6 +72,34 @@ function readStdin(): string {
 function run(argv: string[], root: string, now: Date): number {
     const [command, ...rest] = argv;
     switch (command) {
+        case undefined:
+        case 'help':
+        case '--help':
+        case '-h': {
+            console.log(HELP);
+            return 0;
+        }
+        case 'category': {
+            const [action, ...args] = rest;
+            if (action === 'list' && args.length === 0) {
+                console.log(listCategories(root));
+                return 0;
+            }
+            if (action === 'add') {
+                const { values, positionals } = parseArgs({
+                    args,
+                    allowPositionals: true,
+                    options: { name: { type: 'string' }, description: { type: 'string' } },
+                });
+                if (positionals.length !== 1 || values.name === undefined) {
+                    throw new Error('Verwendung: brain category add <slug> --name <name> [--description <text>]');
+                }
+                addCategory(root, positionals[0], values.name, values.description ?? '', now);
+                console.log(`Kategorie ${positionals[0]} angelegt`);
+                return 0;
+            }
+            throw new Error('Verwendung: brain category add <slug> --name <name> [--description <text>] | brain category list');
+        }
         case 'archive': {
             const { values, positionals } = parseArgs({
                 args: rest,
@@ -135,7 +210,7 @@ function run(argv: string[], root: string, now: Date): number {
             return 0;
         }
         default:
-            throw new Error(USAGE);
+            throw new Error(`Unbekannter Befehl: ${command} → brain help`);
     }
 }
 

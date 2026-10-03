@@ -28,9 +28,23 @@ test('cli log appends a line and rejects unknown operations', () => {
 
 test('cli reports usage errors with exit code 1', () => {
     const root = makeBrain();
-    for (const args of [[], ['unbekannt'], ['archive'], ['archive', 'inbox/x.md', '--falsch']]) {
+    for (const args of [['unbekannt'], ['archive'], ['archive', 'inbox/x.md', '--falsch']]) {
         const result = runCli(root, args);
         assert.equal(result.status, 1, args.join(' '));
         assert.match(result.stderr, /^Fehler: /);
     }
+    assert.match(runCli(root, ['unbekannt']).stderr, /brain help/);
 });
+
+const helpCommands = ['archive', 'remember', 'link', 'category add', 'category list', 'recategorize', 'index', 'check', 'log', 'help'];
+for (const args of [[], ['help'], ['--help'], ['-h']]) {
+    test(`cli ${args.join(' ') || '(no arguments)'} prints the English help`, () => {
+        const result = runCli(makeBrain(), args);
+        assert.equal(result.status, 0, result.stderr);
+        assert.match(result.stdout, /^Usage: brain <command> \[options\]/m);
+        for (const command of helpCommands) {
+            assert.match(result.stdout, new RegExp(`^  ${command}\\b`, 'm'), command);
+        }
+        assert.match(result.stdout, /^Examples:/m);
+    });
+}

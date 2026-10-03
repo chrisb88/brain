@@ -18,7 +18,7 @@ Ist `$ARGUMENTS` nicht leer: zuerst wörtlich als `inbox/chat-note.md` speichern
 
 1. Notiz lesen. Genau eine Kategorie aus `categories.yml` wählen (Hauptthema gewinnt).
    Passt keine: anhalten und den Nutzer fragen (AskUserQuestion) – neue Kategorie vorschlagen (Slug, deutscher Name, ein Satz Beschreibung) sowie die bestpassende bestehende.
-   - Neue Kategorie freigegeben → in `categories.yml` ergänzen, dann `brain log category <slug> "<Name>"`.
+   - Neue Kategorie freigegeben → `brain category add <slug> --name "<Name>" --description "<ein Satz>"` (protokolliert selbst).
    - Nichts freigegeben → `_uncategorized`.
 2. `brain archive inbox/<datei> --category <slug>` → ausgegebenen Archivpfad merken.
 3. Verwandtes Wissen mit Schritt 1–2 der Suchleiter finden (INDEX.md + qmd `query` auf `wiki`). Ist qmd nicht erreichbar: mit INDEX.md und grep weiterarbeiten und den Nutzer informieren.
