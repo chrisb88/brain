@@ -6,10 +6,11 @@ import { archiveNote } from './archive.ts';
 import { addCategory, listCategories } from './category.ts';
 import { checkBrain } from './check.ts';
 import { runIndex } from './indexer.ts';
+import { initBrain, updateBrainConfig } from './init.ts';
 import { linkEntries } from './link.ts';
 import { appendLog, isLogOp } from './log.ts';
 import { brainRoot } from './paths.ts';
-import { runQmd, setupQmd } from './qmd.ts';
+import { isQmdInstalled, runQmd, setupQmd } from './qmd.ts';
 import { mergeCategory, moveEntry, renameCategory } from './recategorize.ts';
 import { remember } from './remember.ts';
 
@@ -53,8 +54,15 @@ Commands:
       conflict, resolve, recategorize, category, ingest.
   help
       Show this help (also: --help, -h, no arguments).
+  init <path>
+      Create a new brain data repository: git without remote, push guard, config
+      from the code repository's template/, empty categories, qmd index.
+  init --update
+      Refresh the config files of the current brain from template/ and reinstall
+      the push guard. Never touches data.
 
 Examples:
+  brain init /mnt/f/second-brain-data
   brain archive inbox/ingress-notes.md --category tech
   brain remember --category tech --title "Kubernetes Ingress" --summary "TLS setup for the ingress controller." \\
       --source archive/tech/2026/10/2026-10-03-1530-ingress-notes --related wiki/tech/azure-aks <<'EOF'
@@ -226,6 +234,29 @@ function run(argv: string[], now: Date): number {
                 throw new Error('Verwendung: brain qmd setup | brain qmd <qmd-argumente>');
             }
             return runQmd(root, rest);
+        }
+        case 'init': {
+            if (rest.length === 1 && rest[0] === '--update') {
+                const updateRoot = brainRoot();
+                const changed = updateBrainConfig(updateRoot);
+                console.log(changed.length === 0
+                    ? 'Konfiguration ist aktuell.'
+                    : ['Aktualisiert (bitte prüfen und committen):', ...changed.map((rel) => `  - ${rel}`)].join('\n'));
+                return 0;
+            }
+            if (rest.length !== 1 || rest[0].startsWith('-')) {
+                throw new Error('Verwendung: brain init <pfad> | brain init --update');
+            }
+            const created = initBrain(callerPath(rest[0]));
+            console.log(`Brain angelegt: ${created} (Git-Repo ohne Remote, Push-Schutz aktiv)`);
+            if (isQmdInstalled()) {
+                setupQmd(created);
+                console.log('qmd-Index eingerichtet.');
+            } else {
+                console.log('Hinweis: qmd nicht gefunden – später im Brain „brain qmd setup“ ausführen.');
+            }
+            console.log(`Nächster Schritt: Claude Code in ${created} starten und den MCP-Server „qmd“ freigeben.`);
+            return 0;
         }
         default:
             throw new Error(`Unbekannter Befehl: ${command} → brain help`);

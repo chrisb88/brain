@@ -36,7 +36,7 @@ test('cli reports usage errors with exit code 1', () => {
     assert.match(runCli(root, ['unbekannt']).stderr, /brain help/);
 });
 
-const helpCommands = ['archive', 'remember', 'link', 'category add', 'category list', 'recategorize', 'qmd setup', 'index', 'check', 'log', 'help'];
+const helpCommands = ['archive', 'remember', 'link', 'category add', 'category list', 'recategorize', 'qmd setup', 'index', 'check', 'log', 'help', 'init'];
 for (const args of [[], ['help'], ['--help'], ['-h']]) {
     test(`cli ${args.join(' ') || '(no arguments)'} prints the English help`, () => {
         const result = runCli(makeBrain(), args);
