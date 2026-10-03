@@ -33,7 +33,7 @@ Ist `$ARGUMENTS` nicht leer: zuerst wörtlich als `inbox/chat-note.md` speichern
 
 1. `brain index`
 2. `brain check` – Fehler, die in diesem Lauf entstanden sind, beheben. Sonst OHNE Commit abbrechen und den Bericht zeigen.
-3. `qmd update && qmd embed`
+3. `brain qmd update && brain qmd embed`
 4. Zusammenfassung für den Nutzer: neue Einträge, geänderte Einträge, neue Verknüpfungen, Hinweise aus `brain check` (offene Punkte, Einträge ohne Kategorie).
 5. `brain log ingest "<n> Notizen" "<Kategorien>"`
 6. `git add -A && git commit -m "ingest: <n> Notizen – <Themen>"`. Niemals push.

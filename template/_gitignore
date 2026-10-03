@@ -1,0 +1,7 @@
+INDEX.md
+graph.json
+LOG.md
+inbox/*
+!inbox/.gitkeep
+.obsidian/
+.claude/settings.local.json

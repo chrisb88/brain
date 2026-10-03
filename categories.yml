@@ -1,4 +1,0 @@
-# Erlaubte Kategorien des Second Brain – nicht von Hand bearbeiten.
-# Neue Kategorie: brain category add <slug> --name "<Name>" [--description "<Text>"]
-# Umbenennen/Zusammenlegen: brain recategorize --rename|--merge … (siehe brain help)
-categories: []

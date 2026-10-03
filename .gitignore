@@ -1,7 +1,3 @@
 scripts/node_modules/
+.claude/settings.local.json
 .obsidian/
-INDEX.md
-graph.json
-LOG.md
-inbox/*
-!inbox/.gitkeep
