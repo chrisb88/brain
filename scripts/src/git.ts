@@ -28,7 +28,7 @@ export function archiveIntegrityErrors(root: string): string[] {
     if (!hasHead(root)) {
         return [];
     }
-    const output = git(root, ['status', '--porcelain=v1', '-z', '--untracked-files=no', '--', 'archive']).toString('utf8');
+    const output = git(root, ['status', '--porcelain=v1', '-z', '--find-renames', '--untracked-files=no', '--', 'archive']).toString('utf8');
     const tokens = output.split('\0').filter((token) => token !== '');
     const errors: string[] = [];
     for (let i = 0; i < tokens.length; i++) {

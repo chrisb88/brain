@@ -1,9 +1,9 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { isKnownCategory, UNCATEGORIZED } from './categories.ts';
 import { archiveIntegrityErrors, isGitRepo } from './git.ts';
 import { extractLinks, getRelated, headings, parseOpenPoints, splitFrontmatter } from './markdown.ts';
-import { hasParentSegment, normalizeId } from './paths.ts';
+import { existsExactCase, hasParentSegment, normalizeId } from './paths.ts';
 import { type Brain, type Entry, loadBrain, relatedIds } from './scan.ts';
 
 export interface CheckReport {
@@ -58,7 +58,7 @@ function checkFrontmatter(brain: Brain, entry: Entry, errors: string[]): void {
     }
     for (const source of fm.sources) {
         const id = typeof source === 'string' ? normalizeId(source) : '';
-        if (!id.startsWith('archive/') || hasParentSegment(id) || !existsSync(join(brain.root, `${id}.md`))) {
+        if (!id.startsWith('archive/') || hasParentSegment(id) || !existsExactCase(brain.root, `${id}.md`)) {
             errors.push(`${path}: Quelle nicht gefunden: ${String(source)}`);
         }
     }
@@ -68,7 +68,7 @@ function checkLinks(brain: Brain, entry: Entry, errors: string[]): void {
     for (const link of extractLinks(entry.body)) {
         const target = normalizeId(link.target);
         const file = join(brain.root, `${target}.md`);
-        if (hasParentSegment(target) || !existsSync(file)) {
+        if (hasParentSegment(target) || !existsExactCase(brain.root, `${target}.md`)) {
             errors.push(`${entry.path}: Link-Ziel fehlt: ${link.raw}`);
             continue;
         }

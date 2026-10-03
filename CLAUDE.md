@@ -15,6 +15,14 @@ Design und Datenvertrag: `docs/superpowers/specs/2026-10-03-second-brain-design.
 - `LOG.md` – Änderungsprotokoll, nur anhängen, nur über `brain` (nicht in Git)
 - `scripts/` – das CLI `brain` (Node/TypeScript, Tests: `npm --prefix scripts test`)
 
+## Einrichtung (frischer Clone oder neuer Rechner)
+
+1. `npm --prefix scripts install && npm --prefix scripts link` – danach ist `brain` im PATH (`brain help`).
+2. qmd: `npm install -g @tobilu/qmd`; in `~/.config/qmd/index.yml` unter `models.embed` das Modell `hf:Qwen/Qwen3-Embedding-0.6B-GGUF/Qwen3-Embedding-0.6B-Q8_0.gguf` eintragen; Collections `wiki` (`--mask "*/*.md"`) und `archive` anlegen, Kontexte setzen, `qmd update && qmd embed`. Befehle, GPU-Einrichtung (CUDA 13 unter WSL, kein Linux-Treiber im WSL) und Messwerte: `docs/superpowers/notes/2026-10-03-qmd-spike.md`.
+3. `brain index` – erzeugt `INDEX.md` und `graph.json` (nicht in Git).
+4. Claude Code im Repo starten und den Projekt-MCP-Server `qmd` (`.mcp.json`) freigeben; mit `/mcp` prüfen.
+5. Optional Obsidian: Ordner als Vault öffnen; `.obsidian/app.json` mit `"newLinkFormat": "absolute"` und `"userIgnoreFilters": ["docs/", "scripts/"]` (lokal, nicht in Git).
+
 ## Feste Regeln
 
 - `INDEX.md` und `graph.json` nie bearbeiten – `brain index` ausführen.

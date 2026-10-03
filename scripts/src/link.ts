@@ -1,8 +1,8 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { appendLog } from './log.ts';
 import { getRelated, setRelated } from './markdown.ts';
-import { hasParentSegment, normalizeId } from './paths.ts';
+import { existsExactCase, hasParentSegment, normalizeId } from './paths.ts';
 
 export function toEntryId(root: string, input: string): string {
     const id = normalizeId(input);
@@ -10,7 +10,7 @@ export function toEntryId(root: string, input: string): string {
     if (parts.length !== 3 || parts[0] !== 'wiki' || hasParentSegment(id)) {
         throw new Error(`Kein gültiger Eintrag (erwartet wiki/<kategorie>/<eintrag>): ${input}`);
     }
-    if (!existsSync(join(root, `${id}.md`))) {
+    if (!existsExactCase(root, `${id}.md`)) {
         throw new Error(`Eintrag nicht gefunden: ${input}`);
     }
     return id;

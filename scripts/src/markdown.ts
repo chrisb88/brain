@@ -27,7 +27,7 @@ export interface OpenPoint {
 
 const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
 const LINK = /\[\[([^\[\]|#]+?)(?:#([^\[\]|]+?))?(?:\|([^\[\]]+?))?\]\]/g;
-const HEADING = /^(#{1,6})\s+(.+?)\s*#*\s*$/;
+const HEADING = /^(#{1,6})\s+(.+?)(?:\s+#+)?\s*$/;
 const CALLOUT_HEAD = /^>\s*\[!([^\]]*)\]([+-]?)\s*(.*)$/;
 const CALLOUT_TITLE = /^(?:Conflict (C-\d{8}-\d+)|Unclear (Q-\d{8}-\d+))$/;
 const AFFECTS = /^>\s*Affects:\s*(.*)$/;
@@ -75,13 +75,14 @@ function codeMask(lines: string[]): boolean[] {
     return mask;
 }
 
-/** Removes inline code spans; a span is closed by a backtick run of exactly the same length. */
-function stripInlineCode(line: string): string {
-    let result = '';
+/** Splits a line into text and inline-code segments; a span is closed by a backtick run of exactly the same length. */
+function splitInlineCode(line: string): Array<{ text: string; code: boolean }> {
+    const segments: Array<{ text: string; code: boolean }> = [];
+    let plain = '';
     let i = 0;
     while (i < line.length) {
         if (line[i] !== '`') {
-            result += line[i];
+            plain += line[i];
             i++;
             continue;
         }
@@ -107,13 +108,20 @@ function stripInlineCode(line: string): string {
             j = end;
         }
         if (close === -1) {
-            result += '`'.repeat(length);
+            plain += '`'.repeat(length);
             i += length;
         } else {
+            segments.push({ text: plain, code: false }, { text: line.slice(i, close + length), code: true });
+            plain = '';
             i = close + length;
         }
     }
-    return result;
+    segments.push({ text: plain, code: false });
+    return segments;
+}
+
+function stripInlineCode(line: string): string {
+    return splitInlineCode(line).filter((segment) => !segment.code).map((segment) => segment.text).join('');
 }
 
 /** Removes fenced code blocks and inline code so that their content is never treated as markup. */
@@ -143,13 +151,16 @@ export function replaceLinkTargets(text: string, map: Map<string, string>): stri
         if (mask[index]) {
             return line;
         }
-        return line.replace(LINK, (raw: string, target: string, anchor?: string, alias?: string) => {
-            const next = map.get(normalizeId(target));
-            if (next === undefined) {
-                return raw;
-            }
-            return `[[${next}${anchor !== undefined ? `#${anchor}` : ''}${alias !== undefined ? `|${alias}` : ''}]]`;
-        });
+        return splitInlineCode(line).map((segment) => (segment.code ? segment.text : segment.text.replace(
+            LINK,
+            (raw: string, target: string, anchor?: string, alias?: string) => {
+                const next = map.get(normalizeId(target));
+                if (next === undefined) {
+                    return raw;
+                }
+                return `[[${next}${anchor !== undefined ? `#${anchor}` : ''}${alias !== undefined ? `|${alias}` : ''}]]`;
+            },
+        ))).join('');
     }).join('\n');
 }
 

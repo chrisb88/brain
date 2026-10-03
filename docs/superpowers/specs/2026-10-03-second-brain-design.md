@@ -96,6 +96,7 @@ categories:
 - `slug`: `^[a-z0-9][a-z0-9-]*$`, eindeutig. Entspricht dem Ordnernamen unter `wiki/` und `archive/`.
 - `name`: Anzeigename. `description`: 1–2 Sätze, was hineingehört (Hilfe für die Einordnung).
 - Start: leere Liste. Erste Kategorien entstehen beim ersten Ingest – mit Freigabe.
+- Die Datei wird nie von Hand bearbeitet, sondern nur über `brain category add` bzw. `brain recategorize` geschrieben. Jeder Schreibvorgang setzt einen festen Kommentar-Kopf mit diesem Hinweis; eigene Kommentare bleiben nicht erhalten.
 - Kategorien sind **grobe Oberkategorien** (Beispiele: Ideen & Konzepte, Gesundheit, Urlaub, Finanzplanung). Neue Kategorien werden nur angelegt, wenn keine bestehende passt, und nur nach Freigabe durch den Nutzer.
 
 **Reservierte Pseudo-Kategorie `_uncategorized`:** steht nicht in `categories.yml` (der Unterstrich ist im Slug-Muster ausgeschlossen, Kollisionen sind unmöglich). Für Notizen, deren Kategorie noch nicht entschieden ist. Wird in Index und Graph wie eine Kategorie mit Anzeigename „Ohne Kategorie“ behandelt; `brain check` listet ihre Einträge mit der Aufforderung, sie zu kategorisieren.

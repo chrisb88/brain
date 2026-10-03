@@ -13,6 +13,12 @@ export const UNCATEGORIZED_NAME = 'Ohne Kategorie';
 export const CATEGORY_SLUG_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 
 const FILE = 'categories.yml';
+const HEADER = [
+    '# Erlaubte Kategorien des Second Brain – nicht von Hand bearbeiten.',
+    '# Neue Kategorie: brain category add <slug> --name "<Name>" [--description "<Text>"]',
+    '# Umbenennen/Zusammenlegen: brain recategorize --rename|--merge … (siehe brain help)',
+    '',
+].join('\n');
 
 export function loadCategories(root: string): Category[] {
     const file = join(root, FILE);
@@ -44,7 +50,7 @@ export function loadCategories(root: string): Category[] {
 }
 
 export function saveCategories(root: string, categories: Category[]): void {
-    writeFileSync(join(root, FILE), stringify({ categories }), 'utf8');
+    writeFileSync(join(root, FILE), `${HEADER}${stringify({ categories })}`, 'utf8');
 }
 
 export function isKnownCategory(categories: Category[], slug: string): boolean {

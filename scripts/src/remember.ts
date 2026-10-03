@@ -5,7 +5,7 @@ import { isKnownCategory, loadCategories } from './categories.ts';
 import { runIndex } from './indexer.ts';
 import { linkEntries, toEntryId } from './link.ts';
 import { appendLog } from './log.ts';
-import { hasParentSegment, normalizeId } from './paths.ts';
+import { existsExactCase, hasParentSegment, normalizeId } from './paths.ts';
 import { slugify } from './slug.ts';
 import { formatDate } from './time.ts';
 
@@ -21,7 +21,7 @@ export interface RememberInput {
 
 function toSourcePath(root: string, input: string): string {
     const id = normalizeId(input);
-    if (!id.startsWith('archive/') || hasParentSegment(id) || !existsSync(join(root, `${id}.md`))) {
+    if (!id.startsWith('archive/') || hasParentSegment(id) || !existsExactCase(root, `${id}.md`)) {
         throw new Error(`Quelle nicht gefunden: ${input}`);
     }
     return `${id}.md`;

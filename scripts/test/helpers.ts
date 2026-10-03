@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, utimesSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
@@ -25,8 +25,8 @@ export function writeFile(root: string, rel: string, content: string): void {
     writeFileSync(join(root, rel), content);
 }
 
-export function makeBrain(files: Record<string, string> = {}): string {
-    const root = mkdtempSync(join(tmpdir(), 'brain-'));
+export function makeBrain(files: Record<string, string> = {}, parent = tmpdir()): string {
+    const root = mkdtempSync(join(parent, 'brain-'));
     for (const [rel, content] of Object.entries(files)) {
         writeFile(root, rel, content);
     }
@@ -70,7 +70,7 @@ export function entry(options: EntryOptions): string {
     return lines.join('\n');
 }
 
-export function validBrain(extra: Record<string, string> = {}): string {
+export function validBrain(extra: Record<string, string> = {}, parent = tmpdir()): string {
     return makeBrain({
         '.gitattributes': '* text=auto eol=lf\narchive/** -text\n',
         'categories.yml': CATEGORIES,
@@ -99,7 +99,17 @@ export function validBrain(extra: Record<string, string> = {}): string {
             sources: [GARMIN],
         }),
         ...extra,
-    });
+    }, parent);
+}
+
+/** Directory on the repository drive (case-insensitive on /mnt/f), or null if that drive is case-sensitive. */
+export function caseInsensitiveParent(): string | null {
+    const parent = join(import.meta.dirname, '..', 'node_modules', '.brain-test');
+    rmSync(parent, { recursive: true, force: true });
+    mkdirSync(parent, { recursive: true });
+    const probe = mkdtempSync(join(parent, 'probe-'));
+    writeFileSync(join(probe, 'a.txt'), '');
+    return existsSync(join(probe, 'A.TXT')) ? parent : null;
 }
 
 export function git(root: string, ...args: string[]): string {

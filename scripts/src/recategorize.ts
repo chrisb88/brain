@@ -22,15 +22,17 @@ function isTracked(root: string, rel: string): boolean {
     }
 }
 
-function moveFile(root: string, fromId: string, toId: string): void {
+/** Moves one file and returns the shell command that undoes the move. */
+function moveFile(root: string, fromId: string, toId: string): string {
     const from = `${fromId}.md`;
     const to = `${toId}.md`;
     mkdirSync(dirname(join(root, to)), { recursive: true });
     if (isTracked(root, from)) {
         execFileSync('git', ['-C', root, 'mv', from, to], { stdio: 'pipe' });
-    } else {
-        renameSync(join(root, from), join(root, to));
+        return `git mv ${to} ${from}`;
     }
+    renameSync(join(root, from), join(root, to));
+    return `mv ${to} ${from}`;
 }
 
 function removeEmptyDirs(dir: string): void {
@@ -87,8 +89,19 @@ function applyMoves(root: string, moves: Moves): void {
             throw new Error(`Ziel existiert bereits: ${to}`);
         }
     }
-    for (const [from, to] of moves) {
-        moveFile(root, from, to);
+    const undo: string[] = [];
+    try {
+        for (const [from, to] of moves) {
+            undo.push(moveFile(root, from, to));
+        }
+    } catch (error) {
+        const steps = undo.length === 0
+            ? '  (es wurde noch nichts verschoben)'
+            : undo.reverse().map((command) => `  ${command}`).join('\n');
+        throw new Error(
+            `Verschieben abgebrochen: ${(error as Error).message.split('\n')[0]}\n`
+            + `Links und categories.yml wurden nicht geändert. Bereits verschobene Dateien zurückholen (aus der Repo-Wurzel):\n${steps}`,
+        );
     }
     const movedEntries = new Set([...moves.values()].filter((id) => id.startsWith('wiki/')));
     for (const entry of loadBrain(root).entries) {
