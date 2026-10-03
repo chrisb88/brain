@@ -7,6 +7,7 @@ import { runIndex } from './indexer.ts';
 import { linkEntries } from './link.ts';
 import { appendLog, isLogOp } from './log.ts';
 import { brainRoot } from './paths.ts';
+import { remember } from './remember.ts';
 
 const USAGE = 'Verwendung: brain <archive|remember|link|log|index|check|recategorize> …';
 
@@ -59,6 +60,36 @@ function run(argv: string[], root: string, now: Date): number {
         case 'index': {
             runIndex(root);
             console.log('INDEX.md und graph.json erzeugt');
+            return 0;
+        }
+        case 'remember': {
+            const { values } = parseArgs({
+                args: rest,
+                options: {
+                    category: { type: 'string' },
+                    title: { type: 'string' },
+                    summary: { type: 'string' },
+                    source: { type: 'string', multiple: true },
+                    tags: { type: 'string' },
+                    related: { type: 'string', multiple: true },
+                },
+            });
+            if (values.category === undefined || values.title === undefined || values.summary === undefined) {
+                throw new Error(
+                    'Verwendung: brain remember --category <slug> --title <t> --summary <s> --source <archivpfad> '
+                    + '[--source …] [--tags a,b] [--related <eintrag> …] < body.md',
+                );
+            }
+            const tags = (values.tags ?? '').split(',').map((tag) => tag.trim()).filter((tag) => tag !== '');
+            console.log(remember(root, {
+                category: values.category,
+                title: values.title,
+                summary: values.summary,
+                sources: values.source ?? [],
+                tags,
+                related: values.related ?? [],
+                body: readStdin(),
+            }, now));
             return 0;
         }
         default:
