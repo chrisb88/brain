@@ -8,6 +8,7 @@ import { runIndex } from './indexer.ts';
 import { linkEntries } from './link.ts';
 import { appendLog, isLogOp } from './log.ts';
 import { brainRoot } from './paths.ts';
+import { mergeCategory, moveEntry, renameCategory } from './recategorize.ts';
 import { remember } from './remember.ts';
 
 const USAGE = 'Verwendung: brain <archive|remember|link|log|index|check|recategorize> …';
@@ -105,6 +106,33 @@ function run(argv: string[], root: string, now: Date): number {
                 console.log('Keine Fehler.');
             }
             return report.errors.length > 0 ? 1 : 0;
+        }
+        case 'recategorize': {
+            const { values, positionals } = parseArgs({
+                args: rest,
+                allowPositionals: true,
+                options: {
+                    rename: { type: 'boolean', default: false },
+                    merge: { type: 'boolean', default: false },
+                    move: { type: 'boolean', default: false },
+                },
+            });
+            const modes = [values.rename, values.merge, values.move].filter((mode) => mode === true).length;
+            if (modes !== 1 || positionals.length !== 2) {
+                throw new Error(
+                    'Verwendung: brain recategorize --rename <alt> <neu> | --merge <von> <nach> | --move <eintrag> <kategorie>',
+                );
+            }
+            const [first, second] = positionals;
+            if (values.rename === true) {
+                renameCategory(root, first, second, now);
+            } else if (values.merge === true) {
+                mergeCategory(root, first, second, now);
+            } else {
+                moveEntry(root, first, second, now);
+            }
+            console.log('Umkategorisierung abgeschlossen');
+            return 0;
         }
         default:
             throw new Error(USAGE);
