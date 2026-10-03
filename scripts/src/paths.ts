@@ -1,8 +1,35 @@
-import { readdirSync } from 'node:fs';
-import { isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { existsSync, readdirSync } from 'node:fs';
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+
+/** Returns BRAIN_ROOT, or the first directory (walking up from each start) that contains categories.yml. */
+export function findBrainRoot(starts: string[], envRoot: string | undefined): string | null {
+    if (envRoot !== undefined && envRoot !== '') {
+        return resolve(envRoot);
+    }
+    for (const start of starts) {
+        let dir = resolve(start);
+        for (;;) {
+            if (existsSync(join(dir, 'categories.yml'))) {
+                return dir;
+            }
+            const parent = dirname(dir);
+            if (parent === dir) {
+                break;
+            }
+            dir = parent;
+        }
+    }
+    return null;
+}
 
 export function brainRoot(): string {
-    return process.env.BRAIN_ROOT ?? resolve(import.meta.dirname, '..', '..');
+    const starts = [process.env.INIT_CWD ?? process.cwd(), process.env.CLAUDE_PROJECT_DIR]
+        .filter((start): start is string => start !== undefined && start !== '');
+    const root = findBrainRoot(starts, process.env.BRAIN_ROOT);
+    if (root === null) {
+        throw new Error('Kein Brain gefunden – im Daten-Repo ausführen oder BRAIN_ROOT setzen.');
+    }
+    return root;
 }
 
 export function toPosix(path: string): string {

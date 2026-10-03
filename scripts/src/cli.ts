@@ -16,7 +16,7 @@ const HELP = `brain – command line tool for the second brain knowledge base
 
 Usage: brain <command> [options]
 
-Run it from the repository root. Entries are addressed as wiki/<category>/<entry>,
+Run it inside a brain data repository (or set BRAIN_ROOT). Entries are addressed as wiki/<category>/<entry>,
 sources as archive/<category>/YYYY/MM/<file> (".md" is optional).
 
 Commands:
@@ -69,16 +69,15 @@ function readStdin(): string {
     return process.stdin.isTTY ? '' : readFileSync(0, 'utf8');
 }
 
-function run(argv: string[], root: string, now: Date): number {
+function run(argv: string[], now: Date): number {
     const [command, ...rest] = argv;
+    const isHelp = command === undefined || command === 'help' || command === '--help' || command === '-h';
+    if (isHelp) {
+        console.log(HELP);
+        return 0;
+    }
+    const root = command === 'init' ? '' : brainRoot();
     switch (command) {
-        case undefined:
-        case 'help':
-        case '--help':
-        case '-h': {
-            console.log(HELP);
-            return 0;
-        }
         case 'category': {
             const [action, ...args] = rest;
             if (action === 'list' && args.length === 0) {
@@ -215,7 +214,7 @@ function run(argv: string[], root: string, now: Date): number {
 }
 
 try {
-    process.exitCode = run(process.argv.slice(2), brainRoot(), new Date());
+    process.exitCode = run(process.argv.slice(2), new Date());
 } catch (error) {
     console.error(`Fehler: ${(error as Error).message}`);
     process.exitCode = 1;

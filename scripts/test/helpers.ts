@@ -137,12 +137,21 @@ export interface CliResult {
     stderr: string;
 }
 
-export function runCli(root: string, args: string[], input = '', cwd = root): CliResult {
+export function runCli(root: string, args: string[], input = '', cwd = root, envOverrides: Record<string, string> = {}): CliResult {
     const cli = join(import.meta.dirname, '..', 'src', 'cli.ts');
+    const env: Record<string, string | undefined> = { ...process.env, BRAIN_ROOT: root, INIT_CWD: cwd };
+    delete env.CLAUDE_PROJECT_DIR;
+    for (const [key, value] of Object.entries(envOverrides)) {
+        if (value === '') {
+            delete env[key];
+        } else {
+            env[key] = value;
+        }
+    }
     const result = spawnSync(
         process.execPath,
         ['--disable-warning=ExperimentalWarning', cli, ...args],
-        { cwd, env: { ...process.env, BRAIN_ROOT: root, INIT_CWD: cwd }, input, encoding: 'utf8' },
+        { cwd, env, input, encoding: 'utf8' },
     );
     return { status: result.status, stdout: result.stdout, stderr: result.stderr };
 }
