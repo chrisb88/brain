@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { archiveNote } from './archive.ts';
+import { checkBrain } from './check.ts';
 import { runIndex } from './indexer.ts';
 import { linkEntries } from './link.ts';
 import { appendLog, isLogOp } from './log.ts';
@@ -91,6 +92,19 @@ function run(argv: string[], root: string, now: Date): number {
                 body: readStdin(),
             }, now));
             return 0;
+        }
+        case 'check': {
+            const report = checkBrain(root);
+            if (report.errors.length > 0) {
+                console.log(['Fehler:', ...report.errors.map((error) => `  - ${error}`)].join('\n'));
+            }
+            if (report.hints.length > 0) {
+                console.log(['Hinweise:', ...report.hints.map((hint) => `  - ${hint}`)].join('\n'));
+            }
+            if (report.errors.length === 0) {
+                console.log('Keine Fehler.');
+            }
+            return report.errors.length > 0 ? 1 : 0;
         }
         default:
             throw new Error(USAGE);
