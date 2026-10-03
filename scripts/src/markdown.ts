@@ -28,9 +28,11 @@ export interface OpenPoint {
 const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
 const LINK = /\[\[([^\[\]|#]+?)(?:#([^\[\]|]+?))?(?:\|([^\[\]]+?))?\]\]/g;
 const HEADING = /^(#{1,6})\s+(.+?)\s*#*\s*$/;
-const CALLOUT_HEAD = /^>\s*\[!(warning|question)\]\s*(.*)$/;
+const CALLOUT_HEAD = /^>\s*\[!([^\]]*)\]([+-]?)\s*(.*)$/;
 const CALLOUT_TITLE = /^(?:Conflict (C-\d{8}-\d+)|Unclear (Q-\d{8}-\d+))$/;
 const AFFECTS = /^>\s*Affects:\s*(.*)$/;
+const FENCE_OPEN = /^\s*(?:(?:[-*+]|\d+[.)])\s+)?(`{3,}|~{3,})(.*)$/;
+const FENCE_CLOSE = /^\s*(`{3,}|~{3,})\s*$/;
 
 export function splitFrontmatter(text: string): ParsedMarkdown {
     const match = FRONTMATTER.exec(text);
@@ -49,11 +51,76 @@ export function splitFrontmatter(text: string): ParsedMarkdown {
     }
 }
 
+/** Marks every line that belongs to a fenced code block (fence lines included); unclosed fences run to the end. */
+function codeMask(lines: string[]): boolean[] {
+    const mask: boolean[] = [];
+    let open: { char: string; length: number } | null = null;
+    for (const line of lines) {
+        if (open !== null) {
+            mask.push(true);
+            const close = FENCE_CLOSE.exec(line);
+            if (close !== null && close[1][0] === open.char && close[1].length >= open.length) {
+                open = null;
+            }
+            continue;
+        }
+        const fence = FENCE_OPEN.exec(line);
+        if (fence !== null && !(fence[1][0] === '`' && fence[2].includes('`'))) {
+            open = { char: fence[1][0], length: fence[1].length };
+            mask.push(true);
+            continue;
+        }
+        mask.push(false);
+    }
+    return mask;
+}
+
+/** Removes inline code spans; a span is closed by a backtick run of exactly the same length. */
+function stripInlineCode(line: string): string {
+    let result = '';
+    let i = 0;
+    while (i < line.length) {
+        if (line[i] !== '`') {
+            result += line[i];
+            i++;
+            continue;
+        }
+        let length = 0;
+        while (line[i + length] === '`') {
+            length++;
+        }
+        let j = i + length;
+        let close = -1;
+        while (j < line.length) {
+            const k = line.indexOf('`', j);
+            if (k === -1) {
+                break;
+            }
+            let end = k;
+            while (line[end] === '`') {
+                end++;
+            }
+            if (end - k === length) {
+                close = k;
+                break;
+            }
+            j = end;
+        }
+        if (close === -1) {
+            result += '`'.repeat(length);
+            i += length;
+        } else {
+            i = close + length;
+        }
+    }
+    return result;
+}
+
 /** Removes fenced code blocks and inline code so that their content is never treated as markup. */
 export function stripCode(text: string): string {
-    return text
-        .replace(/^(```|~~~)[^\n]*\n[\s\S]*?^\1[^\n]*$/gm, '')
-        .replace(/`[^`\n]*`/g, '');
+    const lines = text.split(/\r?\n/);
+    const mask = codeMask(lines);
+    return lines.map((line, index) => (mask[index] ? '' : stripInlineCode(line))).join('\n');
 }
 
 export function extractLinks(text: string): WikiLink[] {
@@ -70,13 +137,20 @@ export function extractLinks(text: string): WikiLink[] {
 }
 
 export function replaceLinkTargets(text: string, map: Map<string, string>): string {
-    return text.replace(LINK, (raw: string, target: string, anchor?: string, alias?: string) => {
-        const next = map.get(target.trim());
-        if (next === undefined) {
-            return raw;
+    const lines = text.split('\n');
+    const mask = codeMask(lines);
+    return lines.map((line, index) => {
+        if (mask[index]) {
+            return line;
         }
-        return `[[${next}${anchor !== undefined ? `#${anchor}` : ''}${alias !== undefined ? `|${alias}` : ''}]]`;
-    });
+        return line.replace(LINK, (raw: string, target: string, anchor?: string, alias?: string) => {
+            const next = map.get(normalizeId(target));
+            if (next === undefined) {
+                return raw;
+            }
+            return `[[${next}${anchor !== undefined ? `#${anchor}` : ''}${alias !== undefined ? `|${alias}` : ''}]]`;
+        });
+    }).join('\n');
 }
 
 export function headings(body: string): Heading[] {
@@ -96,12 +170,14 @@ interface SectionRange {
 }
 
 function findSection(lines: string[], title: string): SectionRange | null {
-    const start = lines.findIndex((line) => line.trim() === `## ${title}`);
+    const mask = codeMask(lines);
+    const heading = new RegExp(`^## ${title}\\s*$`);
+    const start = lines.findIndex((line, index) => !mask[index] && heading.test(line));
     if (start === -1) {
         return null;
     }
     for (let i = start + 1; i < lines.length; i++) {
-        if (/^#{1,2}\s/.test(lines[i])) {
+        if (!mask[i] && /^#{1,2}\s/.test(lines[i])) {
             return { start, end: i };
         }
     }
@@ -142,20 +218,21 @@ export function setRelated(text: string, targets: string[]): string {
 
 export function parseOpenPoints(body: string): { points: OpenPoint[]; malformed: string[] } {
     const lines = body.split(/\r?\n/);
+    const mask = codeMask(lines);
     const points: OpenPoint[] = [];
     const malformed: string[] = [];
     lines.forEach((line, index) => {
-        const head = CALLOUT_HEAD.exec(line);
+        const head = mask[index] ? null : CALLOUT_HEAD.exec(line);
         if (head === null) {
             return;
         }
-        const title = head[2].trim();
-        if (!/^(Conflict|Unclear)\b/.test(title)) {
+        const title = head[3].trim();
+        if (!/^(conflict|unclear)\b/i.test(title)) {
             return;
         }
         const valid = CALLOUT_TITLE.exec(title);
-        const expectedType = title.startsWith('Conflict') ? 'warning' : 'question';
-        if (valid === null || head[1] !== expectedType) {
+        const expectedType = /^conflict/i.test(title) ? 'warning' : 'question';
+        if (valid === null || head[1] !== expectedType || head[2] !== '') {
             malformed.push(`ungültiger Callout „${line.trim()}“ (erwartet: [!warning] Conflict C-YYYYMMDD-N bzw. [!question] Unclear Q-YYYYMMDD-N)`);
             return;
         }
