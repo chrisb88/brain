@@ -26,7 +26,7 @@ Diese Spec umfasst nur den **Wissenskern**: Ablage, Kategorien, Verarbeitung, In
 - Wiki-Prinzip: Claude pflegt Wissenseinträge und arbeitet neues Wissen in bestehende ein.
 - Originale bleiben immer erhalten, Inhalt wird nie verändert.
 - Jede Notiz und jeder Eintrag gehört zu **genau einer Kategorie**; ist die Zuordnung nicht eindeutig, wird die Hauptkategorie gewählt, Bezüge zu anderen Kategorien per Verwandt-Link.
-- Neue Kategorien nur mit expliziter Freigabe des Nutzers. Passt keine bestehende und wird keine neue freigegeben, landet die Notiz in `_ohne-kategorie`.
+- Neue Kategorien nur mit expliziter Freigabe des Nutzers. Passt keine bestehende und wird keine neue freigegeben, landet die Notiz in `_uncategorized`.
 - Zusammenhängende Einträge verlinken sich **gegenseitig** (in allen beteiligten Einträgen).
 - Antworten strikt aus dem Brain, mit Quellen; fehlendes Wissen wird benannt.
 - Obsidian-kompatibel: `[[Wiki-Links]]`, YAML-Frontmatter, Callouts.
@@ -68,11 +68,11 @@ Diese Spec umfasst nur den **Wissenskern**: Ablage, Kategorien, Verarbeitung, In
 ├── inbox/                  neue Rohnotizen (.md, .txt); Inhalt nicht in Git
 ├── archive/
 │   ├── <kategorie>/YYYY/MM/       Originale, Inhalt unveränderlich
-│   └── _ohne-kategorie/YYYY/MM/
+│   └── _uncategorized/YYYY/MM/
 ├── wiki/
 │   ├── CLAUDE.md           Schreibregeln für Wissenseinträge
 │   ├── <kategorie>/<eintrag>.md
-│   └── _ohne-kategorie/<eintrag>.md
+│   └── _uncategorized/<eintrag>.md
 ├── scripts/                CLI `brain` (TypeScript) + Tests
 └── docs/superpowers/       Specs & Pläne
 ```
@@ -97,11 +97,11 @@ categories:
 - Start: leere Liste. Erste Kategorien entstehen beim ersten Ingest – mit Freigabe.
 - Kategorien sind **grobe Oberkategorien** (Beispiele: Ideen & Konzepte, Gesundheit, Urlaub, Finanzplanung). Neue Kategorien werden nur angelegt, wenn keine bestehende passt, und nur nach Freigabe durch den Nutzer.
 
-**Reservierte Pseudo-Kategorie `_ohne-kategorie`:** steht nicht in `categories.yml` (der Unterstrich ist im Slug-Muster ausgeschlossen, Kollisionen sind unmöglich). Für Notizen, deren Kategorie noch nicht entschieden ist. Wird in Index und Graph wie eine Kategorie mit Anzeigename „Ohne Kategorie“ behandelt; `brain check` listet ihre Einträge mit der Aufforderung, sie zu kategorisieren.
+**Reservierte Pseudo-Kategorie `_uncategorized`:** steht nicht in `categories.yml` (der Unterstrich ist im Slug-Muster ausgeschlossen, Kollisionen sind unmöglich). Für Notizen, deren Kategorie noch nicht entschieden ist. Wird in Index und Graph wie eine Kategorie mit Anzeigename „Ohne Kategorie“ behandelt; `brain check` listet ihre Einträge mit der Aufforderung, sie zu kategorisieren.
 
 ### 4.2 Archiv
 
-- Pfad: `archive/<kategorie>/YYYY/MM/YYYY-MM-DD-HHMM-<slug>.md` (Zeitpunkt der Archivierung); `<kategorie>` kann `_ohne-kategorie` sein.
+- Pfad: `archive/<kategorie>/YYYY/MM/YYYY-MM-DD-HHMM-<slug>.md` (Zeitpunkt der Archivierung); `<kategorie>` kann `_uncategorized` sein.
 - Inhalt byte-identisch zum Original; `.txt` wird nur zu `.md` umbenannt.
 - Inhalt wird nie geändert, Dateien werden nie gelöscht. Einzige erlaubte Änderung: Verschieben per `brain recategorize` (reine Umbenennung, Inhalt identisch).
 
@@ -137,7 +137,7 @@ updated: 2026-10-02
 
 **Frontmatter:**
 
-- Pflichtfelder: `title`, `category` (= Ordnername; in `categories.yml` oder `_ohne-kategorie`), `summary` (genau ein Satz, einzeilig), `sources` (≥ 1 existierender Archivpfad), `created`, `updated` (ISO-Datum). `tags` optional.
+- Pflichtfelder: `title`, `category` (= Ordnername; in `categories.yml` oder `_uncategorized`), `summary` (genau ein Satz, einzeilig), `sources` (≥ 1 existierender Archivpfad), `created`, `updated` (ISO-Datum). `tags` optional.
 
 **Links:**
 
@@ -170,8 +170,8 @@ Erzeugt ausschließlich von `brain index`, nicht in Git, nie von Hand oder durch
 Arztbefunde, Training, Ernährung, Schlaf.
 - [[wiki/gesundheit/laufen]] **Laufen** — Trainingspläne und Pulszonen für 10-km-Läufe. · ↔ [[wiki/gesundheit/ernaehrung]]
 
-## Ohne Kategorie (`_ohne-kategorie`)
-- [[wiki/_ohne-kategorie/steuer-idee]] **Steuer-Idee** — …
+## Ohne Kategorie (`_uncategorized`)
+- [[wiki/_uncategorized/steuer-idee]] **Steuer-Idee** — …
 
 ## Referenz-Map
 - [[wiki/technik/kubernetes]] **Kubernetes**
@@ -205,7 +205,7 @@ Arztbefunde, Training, Ernährung, Schlaf.
 ```
 
 - Erzeugt ausschließlich von `brain index` bei jedem Lauf vollständig neu, nicht in Git, nie von Hand oder durch Claude bearbeitet.
-- Knotentypen: `category` (Cluster; inkl. `category:_ohne-kategorie` mit Label „Ohne Kategorie“, falls nicht leer), `entry` (Wissenseintrag), `source` (Original).
+- Knotentypen: `category` (Cluster; inkl. `category:_uncategorized` mit Label „Ohne Kategorie“, falls nicht leer), `entry` (Wissenseintrag), `source` (Original).
 - `id`: Pfad ohne `.md` bzw. `category:<slug>`. `size`: Bytes bei Dateien, Anzahl Einträge bei Kategorien. `mtime`: ISO-8601 UTC aus dem Dateisystem, `null` bei Kategorien.
 - Kanten:
   - `member`: Eintrag → Kategorie.
@@ -237,13 +237,13 @@ Node/TypeScript in `scripts/`, direkt ausgeführt von Node 24, **ohne Modellaufr
 
 | Befehl | Verhalten |
 |---|---|
-| `brain archive <inbox-datei> --category <slug>` | Kategorie muss in `categories.yml` stehen oder `_ohne-kategorie` sein. Verschiebt nach `archive/<kategorie>/YYYY/MM/YYYY-MM-DD-HHMM-<slug>.md`. Slug aus Dateiname ohne Endung: Kleinbuchstaben, ä→ae, ö→oe, ü→ue, ß→ss, sonstige Nicht-Alphanumerik → `-`, mehrfache/Rand-`-` entfernt. Kollision → `-2`, `-3`, … Inhalt unverändert. Gibt neuen Pfad auf stdout aus. Fehler bei: Datei nicht in `inbox/`, fehlt, falsche Endung, unbekannte Kategorie. |
+| `brain archive <inbox-datei> --category <slug>` | Kategorie muss in `categories.yml` stehen oder `_uncategorized` sein. Verschiebt nach `archive/<kategorie>/YYYY/MM/YYYY-MM-DD-HHMM-<slug>.md`. Slug aus Dateiname ohne Endung: Kleinbuchstaben, ä→ae, ö→oe, ü→ue, ß→ss, sonstige Nicht-Alphanumerik → `-`, mehrfache/Rand-`-` entfernt. Kollision → `-2`, `-3`, … Inhalt unverändert. Gibt neuen Pfad auf stdout aus. Fehler bei: Datei nicht in `inbox/`, fehlt, falsche Endung, unbekannte Kategorie. |
 | `brain remember --category <slug> --title <t> --summary <s> --source <archivpfad> [--source …] [--tags a,b] [--related <eintrag> …]` (Body über stdin) | Legt **neuen** Eintrag `wiki/<kategorie>/<slug(title)>.md` mit vollständigem Frontmatter (`created` = `updated` = heute), Body und Abschnitt „Quellen“ an; `--related` wirkt wie `brain link` (beidseitig). Führt danach `brain index` aus – ein Schritt. Fehler bei: unbekannter Kategorie, Eintrag existiert bereits, Quelle oder Related-Eintrag existiert nicht, Summary leer oder mehrzeilig. Bestehende Einträge ändert Claude direkt per Edit. |
 | `brain link <eintrag> <eintrag> [<eintrag> …]` / `brain link --remove <eintrag> <eintrag> […]` | Setzt bzw. entfernt die Verwandt-Beziehung **paarweise zwischen allen genannten Einträgen** in deren `## Verwandt`-Abschnitten (Abschnitt wird bei Bedarf vor `## Quellen` angelegt bzw. leer entfernt; Liste alphabetisch). Idempotent. Fehler bei nicht existierendem Eintrag. Ändert nichts außer dem Verwandt-Abschnitt. |
 | `brain log <op> <ziel> [<beschreibung>]` | Hängt eine Zeile gemäß 4.6 an `LOG.md` an. Fehler bei unbekannter Operation. |
 | `brain index` | Liest `categories.yml`, alle Einträge und Archivdateien; schreibt `INDEX.md` (4.4) und `graph.json` (4.5) vollständig neu. Gleiche Eingaben → gleiche Ausgabe. |
-| `brain check` | Prüft das Brain und gibt einen Bericht in zwei Stufen aus. **Fehler** (→ Exit 1): ① `[[Links]]` in `wiki/` zeigen auf nicht existierende Dateien/Abschnitte; ② Pflichtfelder laut 4.3 fehlen, `category` ≠ Ordnername, `sources` existieren nicht; ③ Ordner unter `wiki/`/`archive/` weder in `categories.yml` noch `_ohne-kategorie`; ④ Archiv-Integrität per Git verletzt (Datei unter `archive/` geändert oder gelöscht; Umbenennung mit Inhaltsänderung) – neue Dateien erlaubt; ⑤ Verwandt-Beziehung nicht symmetrisch; ⑥ offener Punkt unvollständig (ID fehlt in einem unter „Betrifft“ genannten Eintrag, Betrifft-Listen derselben ID weichen ab, ID steht in einem nicht genannten Eintrag, ID doppelt vergeben). **Hinweise** (Exit bleibt 0): offene Widersprüche und Unklarheiten (ID, betroffene Einträge); Einträge in `_ohne-kategorie` mit der Aufforderung, sie zu kategorisieren. Exit 0, wenn keine Fehler. |
-| `brain recategorize` | Nur auf Anweisung des Nutzers. Varianten: `--rename <alt> <neu>` (Kategorie umbenennen), `--merge <von> <nach>` (zusammenlegen), `--move <eintrag> <kategorie>` (Eintrag samt Quellen, die nur er referenziert, verschieben – auch aus `_ohne-kategorie` heraus). Verschiebt per `git mv`, passt alle `[[Links]]` (inkl. Verwandt, Betrifft), `sources`, `category` und `categories.yml` an, führt `brain index` aus. Inhalt der Originale bleibt identisch. |
+| `brain check` | Prüft das Brain und gibt einen Bericht in zwei Stufen aus. **Fehler** (→ Exit 1): ① `[[Links]]` in `wiki/` zeigen auf nicht existierende Dateien/Abschnitte; ② Pflichtfelder laut 4.3 fehlen, `category` ≠ Ordnername, `sources` existieren nicht; ③ Ordner unter `wiki/`/`archive/` weder in `categories.yml` noch `_uncategorized`; ④ Archiv-Integrität per Git verletzt (Datei unter `archive/` geändert oder gelöscht; Umbenennung mit Inhaltsänderung) – neue Dateien erlaubt; ⑤ Verwandt-Beziehung nicht symmetrisch; ⑥ offener Punkt unvollständig (ID fehlt in einem unter „Betrifft“ genannten Eintrag, Betrifft-Listen derselben ID weichen ab, ID steht in einem nicht genannten Eintrag, ID doppelt vergeben). **Hinweise** (Exit bleibt 0): offene Widersprüche und Unklarheiten (ID, betroffene Einträge); Einträge in `_uncategorized` mit der Aufforderung, sie zu kategorisieren. Exit 0, wenn keine Fehler. |
+| `brain recategorize` | Nur auf Anweisung des Nutzers. Varianten: `--rename <alt> <neu>` (Kategorie umbenennen), `--merge <von> <nach>` (zusammenlegen), `--move <eintrag> <kategorie>` (Eintrag samt Quellen, die nur er referenziert, verschieben – auch aus `_uncategorized` heraus). Verschiebt per `git mv`, passt alle `[[Links]]` (inkl. Verwandt, Betrifft), `sources`, `category` und `categories.yml` an, führt `brain index` aus. Inhalt der Originale bleibt identisch. |
 
 ## 6. CLAUDE.md-Dateien
 
@@ -288,7 +288,7 @@ Notizen aus dem Chat speichert Claude zuerst wörtlich in `inbox/`; danach gilt 
 
 1. **Vorprüfung:** Git-Arbeitsverzeichnis sauber (abgeleitete Dateien und `inbox/` sind ignoriert), sonst Abbruch. `brain check` ohne Fehler, sonst Abbruch mit Bericht. `brain index` (Index aktuell, falls Einträge außerhalb eines Ingest geändert wurden). Leere Inbox → „nichts zu tun“. Andere Formate als `.md`/`.txt` bleiben liegen, mit Hinweis.
 2. **Pro Inbox-Datei** (älteste zuerst):
-   1. Notiz lesen, **Kategorie bestimmen** anhand `categories.yml`. Passt keine: anhalten und eine neue Kategorie (Slug, Name, Beschreibung) oder die bestpassende bestehende vorschlagen. Neue Kategorie erst nach Freigabe in `categories.yml` eintragen. Wird nichts freigegeben → `_ohne-kategorie`.
+   1. Notiz lesen, **Kategorie bestimmen** anhand `categories.yml`. Passt keine: anhalten und eine neue Kategorie (Slug, Name, Beschreibung) oder die bestpassende bestehende vorschlagen. Neue Kategorie erst nach Freigabe in `categories.yml` eintragen. Wird nichts freigegeben → `_uncategorized`.
    2. `brain archive <datei> --category <slug>`.
    3. Verwandtes finden nach Suchleiter-Prinzip (Index + qmd scoren).
    4. Einarbeiten gemäß `wiki/CLAUDE.md`: bestehenden Eintrag verdichtend ergänzen (Edit) oder neuen per `brain remember` anlegen; `sources`, `updated`, `summary` pflegen; Zusammenhänge per `brain link` setzen.
@@ -300,7 +300,7 @@ Notizen aus dem Chat speichert Claude zuerst wörtlich in `inbox/`; danach gilt 
 
 ## 9. Abfrage (`/ask <Frage>`)
 
-`/ask` fragt **nur**: kein `brain index`, kein `brain check`, kein `qmd update`, keine Dateiänderungen, kein Log-Eintrag. Es folgt exakt dem Brain-First-Protokoll (6.1) auf dem vorhandenen Stand von `INDEX.md` und qmd-Index. Suchbereich: standardmäßig Collection `wiki`; `/ask --archiv <Frage>` nur `archive`, `/ask --alles <Frage>` beide (ebenso, wenn die Frage dies ausdrücklich verlangt). Bei Antworten aus dem Archiv wird darauf hingewiesen, dass es sich um Originale handelt, die ggf. durch das Wiki überholt sind. Antwort auf Deutsch, nur aus dem Gelesenen, jede Aussage mit `[[…]]`-Quelle. Kein Treffer → „Dazu steht nichts in deinem Brain“, ggf. thematisch nahe Einträge aus dem Index nennen. Fehlt `INDEX.md` (z. B. frischer Clone), weist `/ask` darauf hin, dass `brain index` einmal ausgeführt werden muss.
+`/ask` fragt **nur**: kein `brain index`, kein `brain check`, kein `qmd update`, keine Dateiänderungen, kein Log-Eintrag. Es folgt exakt dem Brain-First-Protokoll (6.1) auf dem vorhandenen Stand von `INDEX.md` und qmd-Index. Suchbereich: standardmäßig Collection `wiki`; `/ask --archive <Frage>` nur `archive`, `/ask --all <Frage>` beide (ebenso, wenn die Frage dies ausdrücklich verlangt). Bei Antworten aus dem Archiv wird darauf hingewiesen, dass es sich um Originale handelt, die ggf. durch das Wiki überholt sind. Antwort auf Deutsch, nur aus dem Gelesenen, jede Aussage mit `[[…]]`-Quelle. Kein Treffer → „Dazu steht nichts in deinem Brain“, ggf. thematisch nahe Einträge aus dem Index nennen. Fehlt `INDEX.md` (z. B. frischer Clone), weist `/ask` darauf hin, dass `brain index` einmal ausgeführt werden muss.
 
 ## 10. Fehlerfälle
 
@@ -312,13 +312,13 @@ Notizen aus dem Chat speichert Claude zuerst wörtlich in `inbox/`; danach gilt 
 | Nicht unterstütztes Format | bleibt in der Inbox, Hinweis |
 | Git-Arbeitsverzeichnis nicht sauber | Abbruch vor dem Ingest |
 | `brain check` meldet Fehler vor dem Ingest | Abbruch, Bericht zeigen |
-| Neue Kategorie abgelehnt | Notiz wird in `_ohne-kategorie` eingearbeitet; `brain check` erinnert daran |
+| Neue Kategorie abgelehnt | Notiz wird in `_uncategorized` eingearbeitet; `brain check` erinnert daran |
 | `INDEX.md` fehlt bei `/ask` | Hinweis: `brain index` ausführen |
 
 ## 11. Tests & Verifikation
 
 1. **Spike (erster Schritt):** qmd global installieren, Qwen3-Embedding konfigurieren, kleine Test-Collection indexieren, prüfen ob CUDA auf der RTX 5070 Ti genutzt wird; Ergebnis (GPU/Vulkan/CPU) und Antwortzeiten von `search`/`query` dokumentieren.
-2. **Unit-Tests** mit `node:test` je Befehl gegen temporäre Ordner; für Check ④ und `recategorize` ein temporäres Git-Repo. Tabellengetrieben: Slugs, Linkformen, fehlende Felder, Kollisionen, unbekannte Kategorien, `_ohne-kategorie`, asymmetrische Verwandt-Links, unvollständige/doppelte Konflikt-IDs, Idempotenz von `brain link`, Format und Feld-Bereinigung von `brain log`.
+2. **Unit-Tests** mit `node:test` je Befehl gegen temporäre Ordner; für Check ④ und `recategorize` ein temporäres Git-Repo. Tabellengetrieben: Slugs, Linkformen, fehlende Felder, Kollisionen, unbekannte Kategorien, `_uncategorized`, asymmetrische Verwandt-Links, unvollständige/doppelte Konflikt-IDs, Idempotenz von `brain link`, Format und Feld-Bereinigung von `brain log`.
 3. **Determinismus-Test:** `brain index` zweimal auf gleichen Eingaben → identische `INDEX.md`/`graph.json`; Golden-File-Vergleich für Index und Graph.
 4. **Typprüfung:** `tsc --noEmit`.
-5. **End-to-End manuell:** 3–4 echte Notizen – eine, die eine neue Kategorie erfordert (einmal freigeben, einmal ablehnen → `_ohne-kategorie`), eine, die einem bestehenden Eintrag widerspricht (Callout in allen betroffenen Einträgen), eine, die mit einem bestehenden Eintrag zusammenhängt (beidseitiger Verwandt-Link). `/ingest`, dann `/ask` mit einer beantwortbaren und einer nicht beantwortbaren Frage; `qmd search` mit `-c wiki`, `-c archive` und ohne `-c` auf Treffer und Antwortzeit prüfen; `/ask --archiv` testen; `LOG.md` enthält die erwarteten Zeilen; `brain check` zeigt die erwarteten Hinweise.
+5. **End-to-End manuell:** 3–4 echte Notizen – eine, die eine neue Kategorie erfordert (einmal freigeben, einmal ablehnen → `_uncategorized`), eine, die einem bestehenden Eintrag widerspricht (Callout in allen betroffenen Einträgen), eine, die mit einem bestehenden Eintrag zusammenhängt (beidseitiger Verwandt-Link). `/ingest`, dann `/ask` mit einer beantwortbaren und einer nicht beantwortbaren Frage; `qmd search` mit `-c wiki`, `-c archive` und ohne `-c` auf Treffer und Antwortzeit prüfen; `/ask --archive` testen; `LOG.md` enthält die erwarteten Zeilen; `brain check` zeigt die erwarteten Hinweise.
