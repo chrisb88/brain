@@ -1,0 +1,30 @@
+{
+  "name": "second-brain-scripts",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "bin": {
+    "brain": "src/cli.ts"
+  },
+  "scripts": {
+    "brain": "node --disable-warning=ExperimentalWarning src/cli.ts",
+    "archive": "node --disable-warning=ExperimentalWarning src/cli.ts archive",
+    "remember": "node --disable-warning=ExperimentalWarning src/cli.ts remember",
+    "link": "node --disable-warning=ExperimentalWarning src/cli.ts link",
+    "log": "node --disable-warning=ExperimentalWarning src/cli.ts log",
+    "index": "node --disable-warning=ExperimentalWarning src/cli.ts index",
+    "check": "node --disable-warning=ExperimentalWarning src/cli.ts check",
+    "recategorize": "node --disable-warning=ExperimentalWarning src/cli.ts recategorize",
+    "test": "node --disable-warning=ExperimentalWarning --test \"test/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.1",
+    "typescript": "^7.0.2"
+  }
+}

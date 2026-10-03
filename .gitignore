@@ -1,0 +1,7 @@
+scripts/node_modules/
+.obsidian/
+INDEX.md
+graph.json
+LOG.md
+inbox/*
+!inbox/.gitkeep
