@@ -1,8 +1,9 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { isKnownCategory, UNCATEGORIZED } from './categories.ts';
 import { archiveIntegrityErrors, isGitRepo } from './git.ts';
 import { pushGuardErrors } from './guard.ts';
+import { qmdConfigPath, qmdIndexName } from './qmd.ts';
 import { extractLinks, getRelated, headings, parseOpenPoints, splitFrontmatter } from './markdown.ts';
 import { existsExactCase, hasParentSegment, normalizeId } from './paths.ts';
 import { type Brain, type Entry, loadBrain, relatedIds } from './scan.ts';
@@ -183,6 +184,9 @@ export function checkBrain(root: string): CheckReport {
         if (entry.category === UNCATEGORIZED) {
             hints.push(`Ohne Kategorie: ${entry.id} – bitte kategorisieren (brain recategorize --move ${entry.id} <kategorie>)`);
         }
+    }
+    if (!existsSync(qmdConfigPath(root))) {
+        hints.push(`qmd-Index für dieses Brain fehlt (${qmdIndexName(root)}) – brain qmd setup ausführen`);
     }
     return { errors, hints };
 }

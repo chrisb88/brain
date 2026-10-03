@@ -9,6 +9,7 @@ import { runIndex } from './indexer.ts';
 import { linkEntries } from './link.ts';
 import { appendLog, isLogOp } from './log.ts';
 import { brainRoot } from './paths.ts';
+import { runQmd, setupQmd } from './qmd.ts';
 import { mergeCategory, moveEntry, renameCategory } from './recategorize.ts';
 import { remember } from './remember.ts';
 
@@ -36,6 +37,12 @@ Commands:
   recategorize --rename <old> <new> | --merge <from> <to> | --move <entry> <category>
       Rename or merge categories, or move an entry to another category. Rewrites
       links; archive files keep their exact content.
+  qmd setup
+      Create this brain's qmd index (collections wiki/archive, contexts, Qwen3
+      embedding model) and embed all files.
+  qmd <qmd-arguments>
+      Run qmd on this brain's own index, e.g. "brain qmd search Ingress -c wiki",
+      "brain qmd update", "brain qmd mcp".
   index
       Rebuild INDEX.md and graph.json from the markdown files.
   check
@@ -57,6 +64,7 @@ Examples:
   brain category add travel --name "Urlaub" --description "Reisen, Ausflüge, Urlaubsplanung."
   brain category list
   brain recategorize --move wiki/_uncategorized/tax-idea finance
+  brain qmd search "Ingress" -c wiki
   brain index && brain check
   brain log update wiki/tech/kubernetes-ingress "TLS section condensed"`;
 
@@ -207,6 +215,17 @@ function run(argv: string[], now: Date): number {
             }
             console.log('Umkategorisierung abgeschlossen');
             return 0;
+        }
+        case 'qmd': {
+            if (rest.length === 1 && rest[0] === 'setup') {
+                setupQmd(root);
+                console.log('qmd-Index eingerichtet');
+                return 0;
+            }
+            if (rest.length === 0) {
+                throw new Error('Verwendung: brain qmd setup | brain qmd <qmd-argumente>');
+            }
+            return runQmd(root, rest);
         }
         default:
             throw new Error(`Unbekannter Befehl: ${command} → brain help`);
