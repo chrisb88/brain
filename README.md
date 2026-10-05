@@ -4,6 +4,8 @@ A personal knowledge base ("second brain") built on plain Markdown files, mainta
 
 You drop raw notes into an inbox; `/ingest` archives the originals unchanged and works the knowledge into condensed, categorized, cross-linked wiki entries. `/ask` answers questions strictly from the brain, with source links, and says so when the brain has no answer.
 
+Based on the approach by [The Node AI](https://www.youtube.com/watch?v=mHSOsy_usAg) – see [Credits](#credits).
+
 This repository contains **only the code and templates** – the `brain` CLI and the configuration for brain data repositories. Your actual notes live in a separate data repository that has no remote and is protected against pushing.
 
 > **Note:** The Claude Code instructions and slash commands in `template/` are written in German, and wiki entries are written in German. Code, CLI and file formats are English.
@@ -99,6 +101,10 @@ npm --prefix scripts run typecheck
 ```
 
 Tests only use temporary directories. To try things out, use a throwaway brain: `brain init /tmp/brain-test` or `BRAIN_ROOT=/tmp/brain-test brain …`.
+
+## Credits
+
+This project is based on the second brain approach presented by [The Node AI](https://www.youtube.com/@TheNodeAI) in the video [„Der echte Weg zum Second Brain: Ohne Programmieren. Vergiss Obsidian."](https://www.youtube.com/watch?v=mHSOsy_usAg) (German). Thanks for the inspiration!
 
 ## License
 
