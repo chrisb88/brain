@@ -76,7 +76,7 @@ Damit funktioniert jeder Aufruf aus dem Projekt-Root, aus beliebigen Unterordner
    - Kein Git-Repo: ohne `--private` Fehler („brain init muss in einem Git-Repository laufen; für ein privates Brain: brain init --private“); mit `--private` → `git init` im aktuellen Verzeichnis.
 2. Fehler, wenn im Repo-Root schon `brain.yml` liegt.
 3. Pfad bestimmen: `<pfad>` als Argument (relativ zum Repo-Root); fehlt er und ist stdin ein Terminal → Abfrage `Ordner für das Brain [knowledge]:`; fehlt er ohne Terminal → Fehler „Pfad angeben: brain init [--private] <pfad>“.
-4. Pfad muss im Repo liegen (kein `..` nach oben hinaus, kein absoluter Pfad außerhalb). Fehler, wenn dort bereits `categories.yml`, `wiki/`, `archive/` oder `inbox/` existiert. (Bewusst nicht „Ordner muss leer sein“, damit `.` in einem bestehenden Repo möglich ist.)
+4. Pfad muss im Repo liegen (kein `..` nach oben hinaus, kein absoluter Pfad außerhalb). Fehler, wenn dort bereits `categories.yml`, `wiki/`, `archive/`, `inbox/`, `.gitignore`, `.gitattributes` oder `CLAUDE.md` existiert – so werden nie Dateien des Projekts überschrieben. (Bewusst nicht „Ordner muss leer sein“; `.` ist damit praktisch nur in neuen bzw. privaten Repos möglich.)
 5. `--private`: Fehler, wenn das Repo ein Remote hat – geprüft, bevor etwas geschrieben wird.
 6. Schreiben: `brain.yml`; Brain-Ordner mit Dateien aus `template/`; `inbox/.gitkeep`, `archive/`, `wiki/`; `categories.yml` (leer, über `saveCategories`).
 7. `--private`: Push-Schutz installieren (wie bisher, Abschnitt 5 der Trennungs-Spec; Markierungszeile neu `# knowledge-base: this repository must never be pushed.`).
@@ -126,9 +126,9 @@ Inhaltliche Änderungen gegenüber den bisherigen Vorlagen:
 
 **`/brain:ask`** (aus `template/.claude/commands/ask.md`): Suche gemäß Suchstufe; sonst unverändert.
 
-**MCP-Server** (`plugin/.mcp.json`): `{"mcpServers": {"qmd": {"command": "brain", "args": ["qmd", "mcp"]}}}`. `brain qmd mcp` findet das Brain über Abschnitt 4. Spike in der Umsetzung: prüfen, mit welchem `cwd` bzw. welchen Umgebungsvariablen Claude Code Plugin-MCP-Server startet; reicht das nicht, `"env": {"BRAIN_ROOT": "${CLAUDE_PROJECT_DIR}"}` setzen – nur gültig, wenn `brain.yml` im Projekt-Root liegt, was nach Abschnitt 5 immer der Fall ist.
+**MCP-Server** (`plugin/.mcp.json`): `{"mcpServers": {"qmd": {"command": "brain", "args": ["qmd", "mcp"]}}}`. `brain qmd mcp` findet das Brain über Abschnitt 4. Spike in der Umsetzung: prüfen, mit welchem `cwd` bzw. welchen Umgebungsvariablen Claude Code Plugin-MCP-Server startet; reicht das nicht, `"env": {"CLAUDE_PROJECT_DIR": "${CLAUDE_PROJECT_DIR}"}` durchreichen – `brain` sucht von dort aufwärts nach `brain.yml` und funktioniert damit auch, wenn Claude in einem Unterordner gestartet wurde.
 
-**Hook `SessionStart`** → `brain session-start <plugin-root>`:
+**Hook `SessionStart`** → `brain session-start <plugin-root>`; ist `brain` nicht im PATH (Teammitglied ohne `install.sh`), gibt der Hook stattdessen die Zeile „Brain: CLI brain fehlt – einmal ./install.sh aus dem knowledge-base-Klon ausführen“ aus und endet mit Exit 0:
 1. Kein Brain gefunden → Exit 0 ohne Ausgabe.
 2. Ausgabe einer Kontextzeile auf stdout, z. B. `Brain: knowledge/ (mode: project, search: keyword)`.
 3. Versionen vergleichen: `version` aus `<plugin-root>/.claude-plugin/plugin.json` gegen die CLI-Version (`scripts/package.json`). Abweichung → zusätzliche Zeile `Warnung: Plugin 1.2.0 und CLI 1.1.0 passen nicht zusammen – Klon aktualisieren (git pull) bzw. claude plugin update brain@knowledge-base.`

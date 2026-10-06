@@ -27,11 +27,12 @@
 
 ## Review Focus
 
-1. **Brain-Ordner mit Leerzeichen/Umlauten** (`docs/Mein Wissen`): `init`, `brain.yml`-Rundreise und die Hintergrund-Aktualisierung (Shell-Quoting) müssen funktionieren → Tests in Task 5 und Task 6.
-2. **Claude startet in einem Unterordner des Projekts** (`src/app/`): das Brain wird aufwärts gefunden → Test in Task 1.
-3. **Projekt hat schon `.gitignore`/`CLAUDE.md` und der Nutzer wählt `.` als Pfad**: `init` bricht ab statt Projektdateien zu überschreiben → Test in Task 5.
-4. **`BRAIN_SEARCH` mit anderer Schreibweise** (`Keyword`, ` off `): wird akzeptiert (getrimmt, klein geschrieben) → Test in Task 3.
-5. **Nutzer hat `INDEX_PATH` gesetzt** (qmd-Override auf eine andere Datenbank): `brain qmd …` darf ihn nicht an qmd weitergeben, sonst mischen sich Indexe → Test in Task 3.
+1. **Brain-Ordner mit Leerzeichen/Umlauten** (`docs/Mein Wissen`): `init`, `brain.yml`-Rundreise und die Hintergrund-Aktualisierung (Shell-Quoting) müssen funktionieren → Tests in Task 1, Task 5 und Task 6 (`projectWithBrain('Mein Wissen')`).
+2. **Teammitglied hat das Plugin angenommen, aber `install.sh` nicht ausgeführt** (kein `brain` im PATH): Der Hook darf die Sitzung nicht stören, sondern gibt eine Hinweiszeile aus → Hook-Befehl und Test in Task 7.
+3. **Claude startet in einem Unterordner des Projekts** (`src/app/`): das Brain wird aufwärts gefunden → Test in Task 1.
+4. **Projekt hat schon `.gitignore`/`CLAUDE.md` und der Nutzer wählt `.` als Pfad**: `init` bricht ab statt Projektdateien zu überschreiben → Test in Task 5.
+5. **`BRAIN_SEARCH` mit anderer Schreibweise** (`Keyword`, ` off `): wird akzeptiert (getrimmt, klein geschrieben) → Test in Task 3.
+6. **Nutzer hat `INDEX_PATH` gesetzt** (qmd-Override auf eine andere Datenbank): `brain qmd …` darf ihn nicht an qmd weitergeben, sonst mischen sich Indexe → Test in Task 3.
 
 ---
 
@@ -57,7 +58,7 @@
   - `findBrainConfig(starts: string[], envRoot: string | undefined): BrainConfig | null`
   - `brainStarts(): string[]`
   - `brainConfig(): BrainConfig`
-  - Test-Helfer: `BRAIN_YML`, `emptyDir()`, `projectWithBrain(): { repo: string; brain: string }`; `makeBrain` legt immer `brain.yml` (`path: .`, `mode: project`) an.
+  - Test-Helfer: `BRAIN_YML`, `emptyDir()`, `projectWithBrain(path = 'knowledge'): { repo: string; brain: string }`; `makeBrain` legt immer `brain.yml` (`path: .`, `mode: project`) an.
 
 - [ ] **Step 1: Test-Helfer anpassen**
 
@@ -79,13 +80,13 @@ export function makeBrain(files: Record<string, string> = {}, parent = tmpdir())
     return root;
 }
 
-/** Project repository (not yet a git repo) with brain.yml at its root and the valid test brain in knowledge/. */
-export function projectWithBrain(): { repo: string; brain: string } {
+/** Project repository (not yet a git repo) with brain.yml at its root and the valid test brain in <path>. */
+export function projectWithBrain(path = 'knowledge'): { repo: string; brain: string } {
     const repo = mkdtempSync(join(tmpdir(), 'project-'));
-    writeFile(repo, 'brain.yml', 'path: knowledge\nmode: project\n');
+    writeFile(repo, 'brain.yml', `path: ${JSON.stringify(path)}\nmode: project\n`);
     writeFile(repo, 'README.md', '# Project\n');
     const source = validBrain();
-    const brain = join(repo, 'knowledge');
+    const brain = join(repo, path);
     cpSync(source, brain, { recursive: true });
     rmSync(join(brain, 'brain.yml'));
     return { repo, brain };
@@ -342,7 +343,7 @@ git commit -m "feat: find the brain via brain.yml (path, mode)"
 - Test: `scripts/test/subfolder.test.ts` (neu)
 
 **Interfaces:**
-- Consumes: `BrainMode` (Task 1), `projectWithBrain()`, `initGit()`.
+- Consumes: `BrainMode` (Task 1), `projectWithBrain(path?)`, `initGit()`.
 - Produces:
   - `uncommittedChanges(root: string): string[]` (Pfade relativ zum Brain-Ordner)
   - `checkBrain(root: string, mode: BrainMode = 'project'): CheckReport`
@@ -1727,24 +1728,25 @@ for (const [label, version, env, expected] of warnings) {
     });
 }
 
-test('session-start refreshes index and qmd in the background without waiting', async () => {
-    const { repo, brain } = projectWithBrain();
-    const nested = join(repo, 'docs');
-    writeFile(nested, 'x.md', 'x');
-    const bin = mkdtempSync(join(tmpdir(), 'qmd-bin-'));
-    const marker = join(bin, 'marker');
-    writeFileSync(join(bin, 'qmd'), `#!/bin/sh\nsleep 2\necho "$*" > "${marker}"\n`);
-    chmodSync(join(bin, 'qmd'), 0o755);
-    const started = Date.now();
-    const result = sessionStart(nested, pluginDir(cliVersion()), { BRAIN_SEARCH: 'keyword', PATH: `${bin}:/usr/bin:/bin` });
-    assert.equal(result.status, 0, result.stderr);
-    assert.ok(Date.now() - started < 1800, 'session-start must not wait for the refresh');
-    for (let i = 0; i < 100 && !existsSync(marker); i++) {
-        await sleep(100);
-    }
-    assert.match(readFileSync(marker, 'utf8'), /^--index brain-.* update\n$/);
-    assert.ok(existsSync(join(brain, 'INDEX.md')));
-});
+for (const folder of ['knowledge', 'Mein Wissen']) {
+    test(`session-start refreshes index and qmd in the background without waiting (${folder})`, async () => {
+        const { repo, brain } = projectWithBrain(folder);
+        const nested = join(repo, 'docs');
+        writeFile(nested, 'x.md', 'x');
+        const bin = mkdtempSync(join(tmpdir(), 'qmd-bin-'));
+        const marker = join(bin, 'marker');
+        writeFileSync(join(bin, 'qmd'), `#!/bin/sh\nsleep 5\necho "$*" > "${marker}"\n`);
+        chmodSync(join(bin, 'qmd'), 0o755);
+        const result = sessionStart(nested, pluginDir(cliVersion()), { BRAIN_SEARCH: 'keyword', PATH: `${bin}:/usr/bin:/bin` });
+        assert.equal(result.status, 0, result.stderr);
+        assert.equal(existsSync(marker), false, 'session-start must not wait for the refresh');
+        for (let i = 0; i < 150 && !existsSync(marker); i++) {
+            await sleep(100);
+        }
+        assert.match(readFileSync(marker, 'utf8'), /^--index brain-.* update\n$/);
+        assert.ok(existsSync(join(brain, 'INDEX.md')));
+    });
+}
 ```
 
 - [ ] **Step 3: Tests laufen lassen – müssen fehlschlagen**
@@ -1884,6 +1886,7 @@ git commit -m "feat: brain --version and brain session-start for the plugin hook
 
 ```ts
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -1892,6 +1895,13 @@ import { cliVersion } from '../src/version.ts';
 const repo = join(import.meta.dirname, '..', '..');
 const json = (rel: string): Record<string, unknown> => JSON.parse(readFileSync(join(repo, rel), 'utf8')) as Record<string, unknown>;
 const text = (rel: string): string => readFileSync(join(repo, rel), 'utf8');
+const HOOK_COMMAND = 'if command -v brain >/dev/null 2>&1; then brain session-start "${CLAUDE_PLUGIN_ROOT}"; else echo "Brain: CLI brain fehlt – einmal ./install.sh aus dem knowledge-base-Klon ausführen"; fi';
+
+test('hook prints a hint instead of failing when the brain CLI is missing', () => {
+    const result = spawnSync('sh', ['-c', HOOK_COMMAND], { env: { PATH: '/nonexistent', CLAUDE_PLUGIN_ROOT: '/x' }, encoding: 'utf8' });
+    assert.equal(result.status, 0);
+    assert.equal(result.stdout, 'Brain: CLI brain fehlt – einmal ./install.sh aus dem knowledge-base-Klon ausführen\n');
+});
 
 test('marketplace lists the brain plugin from ./plugin', () => {
     assert.deepEqual(json('.claude-plugin/marketplace.json').plugins, [
@@ -1908,7 +1918,7 @@ test('plugin version equals the CLI version', () => {
 
 test('plugin wires the hook and the qmd MCP server to the brain CLI', () => {
     assert.deepEqual(json('plugin/hooks/hooks.json'), {
-        hooks: { SessionStart: [{ hooks: [{ type: 'command', command: 'brain session-start "${CLAUDE_PLUGIN_ROOT}"' }] }] },
+        hooks: { SessionStart: [{ hooks: [{ type: 'command', command: HOOK_COMMAND }] }] },
     });
     assert.deepEqual(json('plugin/.mcp.json'), { mcpServers: { qmd: { command: 'brain', args: ['qmd', 'mcp'] } } });
 });
@@ -1967,7 +1977,7 @@ Expected: FAIL – `.claude-plugin/marketplace.json` fehlt.
 {
   "hooks": {
     "SessionStart": [
-      { "hooks": [{ "type": "command", "command": "brain session-start \"${CLAUDE_PLUGIN_ROOT}\"" }] }
+      { "hooks": [{ "type": "command", "command": "if command -v brain >/dev/null 2>&1; then brain session-start \"${CLAUDE_PLUGIN_ROOT}\"; else echo \"Brain: CLI brain fehlt – einmal ./install.sh aus dem knowledge-base-Klon ausführen\"; fi" }] }
     ]
   }
 }
@@ -2379,7 +2389,7 @@ mkdir ~/brain && cd ~/brain
 brain init --private .
 ```
 
-`brain init` never commits. Team members who clone the project get the plugin offered when they start Claude Code; they only need `./install.sh` once.
+`brain init` never commits. Team members who clone the project get the plugin offered when they start Claude Code; they only need `./install.sh` once. Until they have, the plugin prints a hint at session start (and the `qmd` MCP server cannot start).
 
 ## Usage
 
