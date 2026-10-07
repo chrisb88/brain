@@ -173,3 +173,15 @@ test('cli init --update runs inside an existing knowledge folder', () => {
     assert.equal(result.status, 0, result.stderr);
     assert.match(result.stdout, /CLAUDE\.md/);
 });
+
+test('cli init turns on auto-update for the brain marketplace in .claude/settings.json', () => {
+    const repo = project();
+    const settings = '{"extraKnownMarketplaces":{"brain":{"source":{"source":"github","repo":"chrisb88/brain"}}},"enabledPlugins":{"brain@brain":true}}';
+    const { bin, log } = stubClaude(0, `mkdir -p .claude && printf '%s' '${settings}' > .claude/settings.json`);
+    const result = runCli(repo, ['init', 'knowledge'], '', repo, { BRAIN_ROOT: '', PATH: `${bin}:/usr/bin:/bin`, CLAUDE_STUB_LOG: log, BRAIN_SEARCH: 'off' });
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(JSON.parse(readFileSync(join(repo, '.claude', 'settings.json'), 'utf8')), {
+        extraKnownMarketplaces: { brain: { source: { source: 'github', repo: 'chrisb88/brain' }, autoUpdate: true } },
+        enabledPlugins: { 'brain@brain': true },
+    });
+});

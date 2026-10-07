@@ -47,3 +47,18 @@ export function activatePlugin(configRoot: string): boolean {
     }
     return ok;
 }
+
+/** Sets autoUpdate on the brain marketplace entry in .claude/settings.json so every team member gets plugin updates. */
+export function enableAutoUpdate(configRoot: string): boolean {
+    const settings = join(configRoot, '.claude', 'settings.json');
+    const data = parseJson(readText(settings)) as { extraKnownMarketplaces?: Record<string, Record<string, unknown>> } | undefined;
+    const entry = data?.extraKnownMarketplaces?.brain;
+    if (entry === undefined || entry === null || typeof entry !== 'object') {
+        return false;
+    }
+    if (entry.autoUpdate !== true) {
+        entry.autoUpdate = true;
+        writeFileSync(settings, `${JSON.stringify(data, null, 2)}\n`);
+    }
+    return true;
+}

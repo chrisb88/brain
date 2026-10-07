@@ -11,7 +11,7 @@ import { initBrain, updateBrainConfig } from './init.ts';
 import { linkEntries } from './link.ts';
 import { appendLog, isLogOp } from './log.ts';
 import { callerDir } from './paths.ts';
-import { activatePlugin, PLUGIN_INSTALL_COMMAND } from './plugin.ts';
+import { activatePlugin, enableAutoUpdate, PLUGIN_INSTALL_COMMAND } from './plugin.ts';
 import { promptLine } from './prompt.ts';
 import { findOrphanIndexes, isQmdInstalled, qmdIndexReady, removeIndex, runQmd, setupQmd } from './qmd.ts';
 import { mergeCategory, moveEntry, renameCategory } from './recategorize.ts';
@@ -372,9 +372,13 @@ function run(argv: string[], now: Date): number {
                 console.log(`Git-Repository angelegt: ${result.configRoot}`);
             }
             initQmd(result.brainDir);
-            console.log(activatePlugin(result.configRoot)
-                ? 'Plugin brain@brain für dieses Projekt aktiviert.'
-                : `Hinweis: Plugin nicht aktiviert – im Repo ausführen: ${PLUGIN_INSTALL_COMMAND}`);
+            if (activatePlugin(result.configRoot)) {
+                console.log(enableAutoUpdate(result.configRoot)
+                    ? 'Plugin brain@brain für dieses Projekt aktiviert (mit Auto-Update).'
+                    : 'Plugin brain@brain für dieses Projekt aktiviert.');
+            } else {
+                console.log(`Hinweis: Plugin nicht aktiviert – im Repo ausführen: ${PLUGIN_INSTALL_COMMAND}`);
+            }
             console.log('Nächster Schritt: Änderungen prüfen und committen, dann Claude Code im Repo starten.');
             console.log('Teammitglieder führen nach dem Klonen einmal „brain setup“ im Repo aus.');
             return 0;
