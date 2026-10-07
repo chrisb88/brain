@@ -4,6 +4,11 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { installPushGuard } from '../src/guard.ts';
 
+// All temp folders of this test process (and its child processes) live below one folder that is removed on exit.
+const TEST_TMP = mkdtempSync(join(tmpdir(), 'brain-tests-'));
+process.env.TMPDIR = TEST_TMP;
+process.on('exit', () => rmSync(TEST_TMP, { recursive: true, force: true }));
+
 delete process.env.BRAIN_SEARCH;
 delete process.env.INDEX_PATH;
 // Keep every test (in-process and via runCli) away from the real qmd config and cache.
