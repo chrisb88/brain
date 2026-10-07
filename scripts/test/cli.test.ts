@@ -36,7 +36,7 @@ test('cli reports usage errors with exit code 1', () => {
     assert.match(runCli(root, ['unbekannt']).stderr, /brain help/);
 });
 
-const helpCommands = ['archive', 'remember', 'link', 'category add', 'category list', 'recategorize', 'qmd setup', 'index', 'check', 'log', 'help', 'init'];
+const helpCommands = ['archive', 'remember', 'link', 'category add', 'category list', 'recategorize', 'qmd setup', 'qmd prune', 'index', 'check', 'log', 'help', 'init', 'session-start'];
 for (const args of [[], ['help'], ['--help'], ['-h']]) {
     test(`cli ${args.join(' ') || '(no arguments)'} prints the English help`, () => {
         const result = runCli(makeBrain(), args);
@@ -46,5 +46,7 @@ for (const args of [[], ['help'], ['--help'], ['-h']]) {
             assert.match(result.stdout, new RegExp(`^  ${command}\\b`, 'm'), command);
         }
         assert.match(result.stdout, /^Examples:/m);
+        assert.match(result.stdout, /BRAIN_SEARCH/);
+        assert.match(result.stdout, /^  --version\b/m);
     });
 }

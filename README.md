@@ -1,106 +1,91 @@
-# second-brain
+# brain
 
-A personal knowledge base ("second brain") built on plain Markdown files, maintained by [Claude Code](https://claude.com/claude-code) and searchable with [qmd](https://github.com/tobi/qmd).
+brain keeps your knowledge (a "second brain") in plain Markdown files, maintained by [Claude Code](https://claude.com/claude-code) and searchable with [qmd](https://github.com/tobi/qmd).
 
-You drop raw notes into an inbox; `/ingest` archives the originals unchanged and works the knowledge into condensed, categorized, cross-linked wiki entries. `/ask` answers questions strictly from the brain, with source links, and says so when the brain has no answer.
+Use it **per project** – the knowledge lives in a folder of the project repository and is shared with everyone who works on it – or **privately** in its own repository that is protected against pushing. Both have the same layout.
+
+You drop raw notes into an inbox; `/brain:ingest` archives the originals unchanged and works the knowledge into condensed, categorized, cross-linked wiki entries. `/brain:ask` answers questions strictly from the brain, with source links. While you code, Claude consults the brain on its own when a question touches project knowledge.
 
 Based on the approach by [The Node AI](https://www.youtube.com/watch?v=mHSOsy_usAg) – see [Credits](#credits).
 
-This repository contains **only the code and templates** – the `brain` CLI and the configuration for brain data repositories. Your actual notes live in a separate data repository that has no remote and is protected against pushing.
-
-> **Note:** The Claude Code instructions and slash commands in `template/` are written in German, and wiki entries are written in German. Code, CLI and file formats are English.
+> **Note:** Instructions, slash commands and wiki entries are written in German. Code, CLI and file formats are English.
 
 ## Features
 
 - **Markdown is the single source of truth** – Obsidian-compatible (`[[wiki links]]`, YAML frontmatter, callouts).
 - **Originals are never modified** – notes are archived byte-identical under `archive/<category>/YYYY/MM/`.
 - **Condense, don't accumulate** – new knowledge is merged into existing entries; conflicts and open questions are marked and reported by `brain check`.
-- **Strict categories** – new categories only with your approval, otherwise `_uncategorized`.
-- **Fast search** – `INDEX.md` catalog plus a per-brain qmd index (BM25 and multilingual Qwen3 embeddings, GPU optional).
-- **Graph export** – `graph.json` for visualizations and other tools.
-- **Deterministic tooling** – the `brain` CLI does all file operations without any model call.
+- **Strict categories** – new categories only with approval, otherwise `_uncategorized`.
+- **Fast search** – `INDEX.md` catalog plus a qmd index per knowledge folder; search level per machine (`BRAIN_SEARCH`).
+- **Claude Code plugin** – commands, skill, qmd MCP server and a session hook; nothing is copied into your project's own Claude configuration.
+- **Never commits** – you review and commit knowledge changes like code.
 
 ## Requirements
 
-- Linux or WSL
-- Node.js ≥ 24 (TypeScript runs via type stripping, no build step)
-- Git
+- Linux or WSL, Git, Node.js ≥ 24
 - [Claude Code](https://claude.com/claude-code)
-- [qmd](https://github.com/tobi/qmd): `npm install -g @tobilu/qmd`
-- Optional: [Obsidian](https://obsidian.md) for browsing and the graph view
+- [qmd](https://github.com/tobi/qmd) (`npm install -g @tobilu/qmd`) – optional with `BRAIN_SEARCH=off`
 
-## Installation
-
-```bash
-git clone git@github.com:chrisb88/second-brain.git
-cd second-brain
-npm --prefix scripts install
-npm --prefix scripts link   # puts `brain` on your PATH
-brain help
-```
-
-## Create a brain
+## Installation (every user)
 
 ```bash
-brain init ~/second-brain-data
+git clone git@github.com:chrisb88/brain.git
+cd brain
+./install.sh        # brain CLI on your PATH, plugin marketplace registered in Claude Code
 ```
 
-This creates a Git repository **without a remote**, installs a pre-push hook that blocks every push, copies the configuration from `template/`, creates an empty `categories.yml` and sets up the brain's own qmd index.
+Update: `git pull && ./install.sh` and `claude plugin update brain@brain`.
 
-Then:
+## Create a knowledge folder
 
-1. `cd ~/second-brain-data && brain index`
-2. Start Claude Code in the data repository and approve the project MCP server `qmd` (check with `/mcp`).
-3. Optional: open the folder as an Obsidian vault and set `"newLinkFormat": "absolute"` in `.obsidian/app.json`.
+In a project repository:
 
-After updating this repository, refresh a brain's configuration with `brain init --update` (run inside the data repository; never touches data).
+```bash
+cd my-project
+brain init knowledge          # brain.yml + knowledge/, plugin enabled for this project
+git add brain.yml knowledge .claude/settings.json && git commit -m "Add project knowledge"
+```
+
+Private knowledge (own repository, never pushed):
+
+```bash
+mkdir ~/knowledge && cd ~/knowledge
+brain init --private .
+```
+
+`brain init` never commits. Team members who clone the project get the plugin offered when they start Claude Code; they only need `./install.sh` once. Until they have, the plugin prints a hint at session start (and the `qmd` MCP server cannot start).
 
 ## Usage
 
-Inside the data repository, in Claude Code:
+Start Claude Code anywhere in the repository:
 
-| Command | Purpose |
-|---|---|
-| `/ingest [note text]` | Process all notes in `inbox/`: categorize, archive, merge into the wiki, link, index, commit |
-| `/ask [--archive \| --all] <question>` | Answer from the brain only, with source links |
+- `/brain:ingest [note text]` – process `inbox/` (and an optional note given inline). Review and commit the changes afterwards.
+- `/brain:ask [--archive | --all] <question>` – answer from the knowledge only.
+- Ask project questions while you work – the `brain` skill searches the knowledge first.
 
-The `brain` CLI is used by those commands and can be run directly:
+## Search levels
 
-```bash
-brain category list
-brain qmd search "Ingress" -c wiki
-brain index && brain check
-brain help                  # all commands
-```
+Set per machine, e.g. in `~/.zshrc`:
 
-## Data repository layout
+| `BRAIN_SEARCH` | Search | Needs |
+|---|---|---|
+| `hybrid` (default) | qmd with query expansion, embeddings, reranking | qmd + ~2.5 GB models, GPU recommended |
+| `keyword` | qmd BM25 only | qmd, no models |
+| `off` | `INDEX.md` and grep | nothing – disable the `qmd` MCP server once via `/mcp` |
 
-```
-inbox/                      raw notes waiting for /ingest (not in Git)
-archive/<category>/YYYY/MM/ original notes, never changed
-wiki/<category>/<entry>.md  condensed knowledge entries
-categories.yml              allowed categories (managed by `brain category`)
-INDEX.md, graph.json        generated by `brain index` (not in Git)
-LOG.md                      append-only change log (not in Git)
-```
+After changing the level run `brain qmd setup` in the repository. Each knowledge folder has its own qmd index (`brain-<repo>-<hash>`); `brain qmd prune` removes indexes of knowledge folders that no longer exist.
+
+## CLI
+
+`brain help` lists all commands. Highlights: `brain check`, `brain index`, `brain category list`, `brain recategorize`, `brain init --update`, `brain qmd setup`, `brain qmd prune`.
 
 ## Repository layout
 
-```
-scripts/    the `brain` CLI (TypeScript, only dependency: yaml) and its tests
-template/   configuration copied into data repositories
-            (_gitignore → .gitignore, _gitattributes → .gitattributes)
-docs/       design specs, implementation plans and notes (German)
-```
-
-## Development
-
-```bash
-npm --prefix scripts test
-npm --prefix scripts run typecheck
-```
-
-Tests only use temporary directories. To try things out, use a throwaway brain: `brain init /tmp/brain-test` or `BRAIN_ROOT=/tmp/brain-test brain …`.
+- `scripts/` – the `brain` CLI (TypeScript, tests: `npm --prefix scripts test`)
+- `plugin/` – the Claude Code plugin (commands, skill, hook, MCP config)
+- `.claude-plugin/marketplace.json` – the `brain` marketplace
+- `template/` – files copied into a knowledge folder (`.gitignore`, `.gitattributes`, `CLAUDE.md`)
+- `docs/superpowers/` – specs, plans and notes
 
 ## Credits
 
@@ -108,4 +93,4 @@ This project is based on the second brain approach presented by [The Node AI](ht
 
 ## License
 
-[MIT](LICENSE)
+MIT – see [LICENSE](LICENSE).

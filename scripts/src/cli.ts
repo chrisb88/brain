@@ -20,14 +20,30 @@ import { searchLevel } from './search.ts';
 import { sessionLines, startBackgroundRefresh } from './session.ts';
 import { cliVersion } from './version.ts';
 
-const HELP = `brain – command line tool for the second brain knowledge base
+const HELP = `brain – command line tool for knowledge folders
 
 Usage: brain <command> [options]
 
-Run it inside a brain data repository (or set BRAIN_ROOT). Entries are addressed as wiki/<category>/<entry>,
-sources as archive/<category>/YYYY/MM/<file> (".md" is optional).
+Knowledge lives in a git repository: brain.yml at the repository root names the knowledge folder
+(path) and the mode (project: shared with the repository; private: never pushed). brain finds
+brain.yml by walking up from the current directory (or set BRAIN_ROOT to the folder containing
+brain.yml). Entries are addressed as wiki/<category>/<entry>, sources as
+archive/<category>/YYYY/MM/<file> (".md" is optional), relative to the knowledge folder.
+
+Environment:
+  BRAIN_SEARCH=hybrid|keyword|off
+      Search level of this machine: hybrid (qmd with embedding models, default), keyword
+      (qmd BM25 only, no models) or off (INDEX.md and grep, no qmd).
 
 Commands:
+  init [--private] [<path>]
+      Create a knowledge folder in the current git repository: brain.yml at the repository root and the
+      knowledge folder at <path> (asked for when missing, default "knowledge"). --private also
+      installs the push guard, requires a repository without remote and creates the
+      repository if needed. Never commits.
+  init --update
+      Refresh the knowledge folder files from template/ (and the push guard in private mode).
+      Never touches data.
   archive <inbox-file> --category <slug>
       Move a note from inbox/ to archive/<category>/YYYY/MM/ without changing its
       content. Prints the new archive path.
@@ -45,31 +61,31 @@ Commands:
       Rename or merge categories, or move an entry to another category. Rewrites
       links; archive files keep their exact content.
   qmd setup
-      Create this brain's qmd index (collections wiki/archive, contexts, Qwen3
-      embedding model) and embed all files.
+      Create this knowledge folder's qmd index for the current BRAIN_SEARCH level (collections
+      wiki/archive, contexts; hybrid also sets the Qwen3 embedding model and embeds).
+  qmd prune [--yes]
+      List qmd indexes of knowledge folders that no longer exist and delete them after confirmation.
   qmd <qmd-arguments>
-      Run qmd on this brain's own index, e.g. "brain qmd search Ingress -c wiki",
+      Run qmd on this knowledge folder's own index, e.g. "brain qmd search Ingress -c wiki",
       "brain qmd update", "brain qmd mcp".
   index
       Rebuild INDEX.md and graph.json from the markdown files.
   check
-      Validate the brain. Errors exit with 1; hints list open conflicts/unclear
-      points and uncategorized entries.
+      Validate the knowledge folder. Errors exit with 1; hints list open conflicts/unclear
+      points, uncategorized entries, uncommitted changes and qmd index problems.
   log <op> <target> [<description>]
       Append a line to LOG.md. Ops: archive, create, update, link, unlink,
       conflict, resolve, recategorize, category, ingest.
+  session-start <plugin-root>
+      Internal: used by the plugin's SessionStart hook.
+  --version
+      Print the CLI version.
   help
       Show this help (also: --help, -h, no arguments).
-  init [--private] [<path>]
-      Create a knowledge folder in the current git repository (brain.yml, template
-      files, empty categories, qmd index) and enable the brain plugin. --private
-      creates a standalone repository without remote and with push guard.
-  init --update
-      Refresh the config files of the current brain from template/ and reinstall
-      the push guard. Never touches data.
 
 Examples:
   brain init knowledge
+  brain init --private .
   brain archive inbox/ingress-notes.md --category tech
   brain remember --category tech --title "Kubernetes Ingress" --summary "TLS setup for the ingress controller." \\
       --source archive/tech/2026/10/2026-10-03-1530-ingress-notes --related wiki/tech/azure-aks <<'EOF'
@@ -77,11 +93,9 @@ Examples:
   EOF
   brain link wiki/tech/kubernetes-ingress wiki/tech/azure-aks
   brain category add travel --name "Urlaub" --description "Reisen, Ausflüge, Urlaubsplanung."
-  brain category list
   brain recategorize --move wiki/_uncategorized/tax-idea finance
-  brain qmd search "Ingress" -c wiki
-  brain index && brain check
-  brain log update wiki/tech/kubernetes-ingress "TLS section condensed"`;
+  BRAIN_SEARCH=keyword brain qmd setup
+  brain index && brain check`;
 
 /** Resolves a path argument relative to the directory the user called the command from. */
 function callerPath(path: string): string {
