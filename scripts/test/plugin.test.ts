@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -48,4 +48,9 @@ test('commands never commit or push and follow the search level', () => {
     for (const level of ['hybrid', 'keyword', 'off']) {
         assert.match(text('plugin/skills/brain/SKILL.md'), new RegExp(`\\| \`${level}\` \\|`), level);
     }
+});
+
+test('cli.ts is committed as executable so npm link works after git pull', () => {
+    const entry = execFileSync('git', ['-C', repo, 'ls-files', '-s', 'scripts/src/cli.ts'], { encoding: 'utf8' });
+    assert.match(entry, /^100755 /);
 });
