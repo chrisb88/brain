@@ -12,7 +12,7 @@ brain legt Wissen als Markdown-Dateien in einem Wissens-Ordner dieses Repositori
 - Beim Sitzungsstart steht im Kontext eine Zeile wie `Brain: knowledge/ (mode: project, search: hybrid)`: Wissens-Ordner (relativ zum Repo-Root), Modus und Suchstufe. Fehlt sie: `brain check` ausführen; meldet es „Kein Wissens-Ordner gefunden“, gibt es hier keinen.
 - Alle Pfade in diesem Skill sind relativ zum Wissens-Ordner. Shell-Befehle immer im Wissens-Ordner ausführen: `cd <Wissens-Ordner> && …`.
 - Steht in der Kontextzeile eine Warnung (Versionen passen nicht, ungültige Suchstufe), den Nutzer einmal darauf hinweisen.
-- Steht im Kontext eine Hinweis-Zeile wie `Brain: Hinweis – qmd-Index fehlt – …`, den Nutzer einmal darauf hinweisen (hier: einmal `brain qmd setup` im Repository ausführen).
+- Steht im Kontext eine Hinweis-Zeile wie `Brain: Hinweis – qmd-Index fehlt – …`, den Nutzer einmal darauf hinweisen (hier: einmal `brain setup` im Repository ausführen).
 
 ## Aufbau
 
@@ -69,6 +69,7 @@ Kommt eine Wissensfrage während anderer Arbeit (z. B. beim Programmieren) auf, 
 | `brain category add <slug> --name <name> [--description <text>]` | neue Kategorie registrieren – nur nach Freigabe durch den Nutzer |
 | `brain category list` | Kategorien mit Anzahl der Einträge anzeigen |
 | `brain recategorize --rename a b \| --merge a b \| --move <eintrag> <kategorie>` | nur auf Anweisung des Nutzers |
+| `brain setup` | geklontes Repo auf diesem Rechner einrichten (Plugin, INDEX.md, qmd-Index) – einmal pro Klon |
 | `brain qmd setup` | qmd-Index dieses Wissens-Ordners gemäß Suchstufe einrichten |
 | `brain qmd <argumente>` | qmd auf dem Index dieses Wissens-Ordners, z. B. `brain qmd update` |
 | `brain help` | Übersicht aller Befehle (englisch) |

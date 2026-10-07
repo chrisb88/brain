@@ -53,9 +53,19 @@ mkdir ~/knowledge && cd ~/knowledge
 brain init --private .
 ```
 
-`brain init` also enables the plugin for the project: it declares the `brain` marketplace and the plugin in `.claude/settings.json` (`extraKnownMarketplaces`, `enabledPlugins`), so team members get the plugin offered when they start Claude Code. If `brain init` printed a `claude plugin …` hint instead, run that command first – `.claude/settings.json` only exists afterwards.
+`brain init` also enables the plugin for the project: it declares the `brain` marketplace and the plugin in `.claude/settings.json` (`extraKnownMarketplaces`, `enabledPlugins`). Team members run `brain setup` once after cloning (see below). If `brain init` printed a `claude plugin …` hint instead, run that command first – `.claude/settings.json` only exists afterwards.
 
-`brain init` never commits. Team members need `./install.sh` once and `brain qmd setup` once per clone (unless `BRAIN_SEARCH=off`). Until they have, the plugin prints a hint at session start (and the `qmd` MCP server cannot start).
+`brain init` never commits.
+
+### Team members (after cloning)
+
+```bash
+./install.sh        # once per machine, from your brain clone
+cd my-project
+brain setup         # once per clone
+```
+
+`brain setup` enables the plugin for this checkout (Claude Code registers project plugins per directory, so a new clone shows the plugin with an error such as "not cached" until then), builds `INDEX.md` and `graph.json` (generated, not committed) and creates the qmd index for your `BRAIN_SEARCH` level. With the default `hybrid` this downloads ~2.5 GB of models; use `BRAIN_SEARCH=keyword brain setup` (and set the level permanently, see [Search levels](#search-levels)) to avoid that. Then start Claude Code in the repository root. If `.claude/settings.json` was only reordered by Claude Code, `brain setup` restores the committed file.
 
 ## Usage
 
@@ -79,7 +89,7 @@ After changing the level run `brain qmd setup` in the repository. Each knowledge
 
 ## CLI
 
-`brain help` lists all commands. Highlights: `brain check`, `brain index`, `brain category list`, `brain recategorize`, `brain init --update`, `brain qmd setup`, `brain qmd prune`.
+`brain help` lists all commands. Highlights: `brain setup`, `brain check`, `brain index`, `brain category list`, `brain recategorize`, `brain init --update`, `brain qmd setup`, `brain qmd prune`.
 
 ## Repository layout
 
