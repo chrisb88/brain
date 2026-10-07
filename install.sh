@@ -9,7 +9,8 @@ major=$(node -p 'process.versions.node.split(".")[0]')
 [ "$major" -ge 24 ] || { echo "Fehler: Node.js $major gefunden, benötigt ≥ 24." >&2; exit 1; }
 
 npm --prefix scripts install
-npm --prefix scripts link
+# Not "npm --prefix scripts link": --prefix also moves the global prefix, so the link would land in scripts/bin.
+(cd scripts && npm link)
 
 if command -v claude >/dev/null 2>&1; then
     claude plugin marketplace add chrisb88/brain \
