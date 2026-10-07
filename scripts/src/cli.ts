@@ -14,6 +14,7 @@ import { callerDir } from './paths.ts';
 import { isQmdInstalled, runQmd, setupQmd } from './qmd.ts';
 import { mergeCategory, moveEntry, renameCategory } from './recategorize.ts';
 import { remember } from './remember.ts';
+import { searchLevel } from './search.ts';
 
 const HELP = `brain – command line tool for the second brain knowledge base
 
@@ -227,13 +228,21 @@ function run(argv: string[], now: Date): number {
             return 0;
         }
         case 'qmd': {
+            const level = searchLevel();
             if (rest.length === 1 && rest[0] === 'setup') {
-                setupQmd(root);
-                console.log('qmd-Index eingerichtet');
+                if (level === 'off') {
+                    console.log('BRAIN_SEARCH=off – qmd wird nicht eingerichtet.');
+                    return 0;
+                }
+                setupQmd(root, level);
+                console.log(`qmd-Index eingerichtet (${level})`);
                 return 0;
             }
             if (rest.length === 0) {
-                throw new Error('Verwendung: brain qmd setup | brain qmd <qmd-argumente>');
+                throw new Error('Verwendung: brain qmd setup | brain qmd prune [--yes] | brain qmd <qmd-argumente>');
+            }
+            if (rest[0] === 'mcp' && level === 'off') {
+                throw new Error('BRAIN_SEARCH=off – qmd-MCP-Server bitte über /mcp deaktivieren');
             }
             return runQmd(root, rest);
         }
@@ -253,7 +262,7 @@ function run(argv: string[], now: Date): number {
             console.log(`Brain angelegt: ${created} (Git-Repo ohne Remote, Push-Schutz aktiv)`);
             if (isQmdInstalled()) {
                 try {
-                    setupQmd(created);
+                    setupQmd(created, 'hybrid');
                     console.log('qmd-Index eingerichtet.');
                 } catch (error) {
                     console.log(`Hinweis: qmd-Einrichtung fehlgeschlagen (${(error as Error).message}) – später im Brain „brain qmd setup“ ausführen.`);

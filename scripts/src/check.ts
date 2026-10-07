@@ -193,7 +193,7 @@ export function checkBrain(root: string, mode: BrainMode = 'project'): CheckRepo
         }
     }
     if (!existsSync(qmdConfigPath(root))) {
-        hints.push(`qmd-Index für dieses Brain fehlt (${qmdIndexName(root)}) – brain qmd setup ausführen`);
+        hints.push(`qmd-Index für diesen Wissens-Ordner fehlt (${qmdIndexName(root)}) – brain qmd setup ausführen`);
     }
     return { errors, hints };
 }

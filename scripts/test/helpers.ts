@@ -4,6 +4,9 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { installPushGuard } from '../src/guard.ts';
 
+delete process.env.BRAIN_SEARCH;
+delete process.env.INDEX_PATH;
+
 export const NOW = new Date(2026, 9, 3, 15, 30);
 export const FIXED_MTIME = new Date('2026-10-02T15:30:00Z');
 
