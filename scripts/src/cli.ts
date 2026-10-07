@@ -11,7 +11,8 @@ import { initBrain, updateBrainConfig } from './init.ts';
 import { linkEntries } from './link.ts';
 import { appendLog, isLogOp } from './log.ts';
 import { callerDir } from './paths.ts';
-import { isQmdInstalled, runQmd, setupQmd } from './qmd.ts';
+import { promptLine } from './prompt.ts';
+import { findOrphanIndexes, isQmdInstalled, removeIndex, runQmd, setupQmd } from './qmd.ts';
 import { mergeCategory, moveEntry, renameCategory } from './recategorize.ts';
 import { remember } from './remember.ts';
 import { searchLevel } from './search.ts';
@@ -87,6 +88,33 @@ function readStdin(): string {
     return process.stdin.isTTY ? '' : readFileSync(0, 'utf8');
 }
 
+function pruneIndexes(args: string[]): number {
+    const { values } = parseArgs({ args, options: { yes: { type: 'boolean', default: false } } });
+    const orphans = findOrphanIndexes();
+    if (orphans.length === 0) {
+        console.log('Nichts zu tun.');
+        return 0;
+    }
+    console.log(['Verwaiste qmd-Indexe:', ...orphans.map((orphan) => `  - ${orphan.name} (${orphan.path})`)].join('\n'));
+    let remove = values.yes === true;
+    if (!remove) {
+        if (process.stdin.isTTY !== true) {
+            console.log('Ohne Terminal wird nichts gelöscht – brain qmd prune --yes');
+            return 0;
+        }
+        remove = /^(y|yes|j|ja)$/i.test(promptLine('Löschen? [y/N] '));
+    }
+    if (!remove) {
+        console.log('Nichts gelöscht.');
+        return 0;
+    }
+    for (const orphan of orphans) {
+        removeIndex(orphan.name);
+    }
+    console.log(`${orphans.length} Index(e) gelöscht.`);
+    return 0;
+}
+
 function run(argv: string[], now: Date): number {
     const [command, ...rest] = argv;
     const isHelp = command === undefined || command === 'help' || command === '--help' || command === '-h';
@@ -94,7 +122,8 @@ function run(argv: string[], now: Date): number {
         console.log(HELP);
         return 0;
     }
-    const config = command === 'init' ? null : brainConfig();
+    const needsBrain = !(command === 'init' || (command === 'qmd' && rest[0] === 'prune'));
+    const config = needsBrain ? brainConfig() : null;
     const root = config?.brainDir ?? '';
     switch (command) {
         case 'category': {
@@ -228,6 +257,9 @@ function run(argv: string[], now: Date): number {
             return 0;
         }
         case 'qmd': {
+            if (rest[0] === 'prune') {
+                return pruneIndexes(rest.slice(1));
+            }
             const level = searchLevel();
             if (rest.length === 1 && rest[0] === 'setup') {
                 if (level === 'off') {

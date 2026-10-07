@@ -1,9 +1,9 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
-import { parseDocument } from 'yaml';
+import { parse, parseDocument } from 'yaml';
 import { findConfigRoot } from './config.ts';
 import type { SearchLevel } from './search.ts';
 import { slugify } from './slug.ts';
@@ -89,5 +89,88 @@ export function setupQmd(root: string, level: Exclude<SearchLevel, 'off'>): void
     mustRunQmd(root, ['update']);
     if (level === 'hybrid') {
         mustRunQmd(root, ['embed']);
+    }
+}
+
+function readYaml(file: string): unknown {
+    try {
+        return parse(readFileSync(file, 'utf8'));
+    } catch {
+        return null;
+    }
+}
+
+function field(value: unknown, ...keys: string[]): unknown {
+    let current = value;
+    for (const key of keys) {
+        if (current === null || typeof current !== 'object') {
+            return undefined;
+        }
+        current = (current as Record<string, unknown>)[key];
+    }
+    return current;
+}
+
+/** Index checks for brain check: foreign collection paths are errors, everything else hints. */
+export function qmdCheck(root: string, level: SearchLevel): { errors: string[]; hints: string[] } {
+    const errors: string[] = [];
+    const hints: string[] = [];
+    if (level === 'off') {
+        return { errors, hints };
+    }
+    const name = qmdIndexName(root);
+    const file = qmdConfigPath(root);
+    if (!existsSync(file)) {
+        hints.push(`qmd-Index für diesen Wissens-Ordner fehlt (${name}) – brain qmd setup ausführen`);
+        return { errors, hints };
+    }
+    const config = readYaml(file);
+    for (const collection of ['wiki', 'archive']) {
+        const path = field(config, 'collections', collection, 'path');
+        const expected = join(root, collection);
+        if (typeof path !== 'string') {
+            hints.push(`qmd-Index ${name}: Collection ${collection} fehlt – brain qmd setup ausführen`);
+        } else if (realPath(path) !== realPath(expected)) {
+            errors.push(`qmd-Index ${name}: Collection ${collection} zeigt auf ${path} statt ${expected} – brain qmd setup ausführen`);
+        }
+    }
+    if (level === 'hybrid' && field(config, 'models', 'embed') !== QMD_EMBED_MODEL) {
+        hints.push(`qmd-Index ${name}: Embedding-Modell fehlt oder veraltet – brain qmd setup ausführen`);
+    }
+    return { errors, hints };
+}
+
+export interface OrphanIndex {
+    name: string;
+    path: string;
+}
+
+/** brain-* indexes whose wiki collection no longer exists. */
+export function findOrphanIndexes(): OrphanIndex[] {
+    const dir = qmdConfigDir();
+    if (!existsSync(dir)) {
+        return [];
+    }
+    const orphans: OrphanIndex[] = [];
+    for (const file of readdirSync(dir).sort()) {
+        if (!file.startsWith('brain-') || !file.endsWith('.yml')) {
+            continue;
+        }
+        const path = field(readYaml(join(dir, file)), 'collections', 'wiki', 'path');
+        if (typeof path !== 'string' || !existsSync(path)) {
+            orphans.push({ name: file.slice(0, -'.yml'.length), path: typeof path === 'string' ? path : '(unbekannt)' });
+        }
+    }
+    return orphans;
+}
+
+/** Deletes the config and the database files of a brain-* index. */
+export function removeIndex(name: string): void {
+    if (!name.startsWith('brain-')) {
+        throw new Error(`Kein Brain-Index: ${name}`);
+    }
+    rmSync(join(qmdConfigDir(), `${name}.yml`), { force: true });
+    for (const suffix of ['.sqlite', '.sqlite-shm', '.sqlite-wal']) {
+        rmSync(join(qmdCacheDir(), `${name}${suffix}`), { force: true });
     }
 }

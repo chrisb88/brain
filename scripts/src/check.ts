@@ -1,13 +1,14 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { isKnownCategory, UNCATEGORIZED } from './categories.ts';
 import type { BrainMode } from './config.ts';
 import { archiveIntegrityErrors, isGitRepo, uncommittedChanges } from './git.ts';
 import { pushGuardErrors } from './guard.ts';
-import { qmdConfigPath, qmdIndexName } from './qmd.ts';
+import { qmdCheck } from './qmd.ts';
 import { extractLinks, getRelated, headings, parseOpenPoints, splitFrontmatter } from './markdown.ts';
 import { existsExactCase, hasParentSegment, normalizeId } from './paths.ts';
 import { type Brain, type Entry, loadBrain, relatedIds } from './scan.ts';
+import { searchLevel, type SearchLevel } from './search.ts';
 
 export interface CheckReport {
     errors: string[];
@@ -159,7 +160,7 @@ function checkOpenPoints(brain: Brain, errors: string[], hints: string[]): void 
     }
 }
 
-export function checkBrain(root: string, mode: BrainMode = 'project'): CheckReport {
+export function checkBrain(root: string, mode: BrainMode = 'project', level: SearchLevel = searchLevel()): CheckReport {
     const errors: string[] = [];
     const hints: string[] = [];
     let brain: Brain;
@@ -192,8 +193,8 @@ export function checkBrain(root: string, mode: BrainMode = 'project'): CheckRepo
             hints.push(`Ohne Kategorie: ${entry.id} – bitte kategorisieren (brain recategorize --move ${entry.id} <kategorie>)`);
         }
     }
-    if (!existsSync(qmdConfigPath(root))) {
-        hints.push(`qmd-Index für diesen Wissens-Ordner fehlt (${qmdIndexName(root)}) – brain qmd setup ausführen`);
-    }
+    const qmd = qmdCheck(root, level);
+    errors.push(...qmd.errors);
+    hints.push(...qmd.hints);
     return { errors, hints };
 }
