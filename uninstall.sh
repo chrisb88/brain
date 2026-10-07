@@ -40,7 +40,10 @@ else
     fi
 fi
 
-cat <<'EOF'
+cat <<EOF
+qmd bleibt installiert (eigenständiges Tool, evtl. auch anderweitig genutzt). Entfernen:
+  npm rm -g @tobilu/qmd
+  danach bei Bedarf Modelle (~2.5 GB) und übrige Indexe löschen: $cache, $config
 Plugin brain in Claude Code bleibt installiert. Entfernen:
   - pro Projekt im Repo-Root: claude plugin uninstall brain@brain --scope project
   - oder überall: claude plugin marketplace remove brain

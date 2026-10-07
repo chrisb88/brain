@@ -117,7 +117,7 @@ cd brain
 ./uninstall.sh      # add --yes to delete the qmd indexes without asking
 ```
 
-It removes the `brain` CLI and – after confirmation – the qmd indexes of all knowledge folders (`brain-*` in `~/.config/qmd` and `~/.cache/qmd`; the models and other qmd indexes stay). Knowledge folders, repositories and Claude Code settings are never touched. The plugin stays installed; remove it per project with `claude plugin uninstall brain@brain --scope project`, or everywhere with `claude plugin marketplace remove brain` – note that the latter also removes `brain@brain` from the `.claude/settings.json` of shared projects.
+It removes the `brain` CLI and – after confirmation – the qmd indexes of all knowledge folders (`brain-*` in `~/.config/qmd` and `~/.cache/qmd`; the models and other qmd indexes stay). Knowledge folders, repositories and Claude Code settings are never touched. qmd stays installed as well (it is a standalone tool you may use elsewhere); remove it with `npm rm -g @tobilu/qmd` and, if you like, delete its models and remaining indexes in `~/.cache/qmd` and `~/.config/qmd`. The plugin stays installed; remove it per project with `claude plugin uninstall brain@brain --scope project`, or everywhere with `claude plugin marketplace remove brain` – note that the latter also removes `brain@brain` from the `.claude/settings.json` of shared projects.
 
 ## Repository layout
 
