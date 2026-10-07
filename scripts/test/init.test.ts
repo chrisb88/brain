@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { chmodSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -7,7 +7,7 @@ import { loadCategories } from '../src/categories.ts';
 import { checkBrain } from '../src/check.ts';
 import { loadBrainConfig } from '../src/config.ts';
 import { initBrain, type InitOptions, updateBrainConfig } from '../src/init.ts';
-import { emptyDir, entry, git, LAUF, read, runCli, writeFile } from './helpers.ts';
+import { emptyDir, entry, git, LAUF, read, runCli, stubClaude, writeFile } from './helpers.ts';
 
 const PROJECT_FILES: Record<string, string> = {
     'README.md': '# Projekt\n',
@@ -124,14 +124,6 @@ test('updateBrainConfig reinstalls a removed push guard in private mode', () => 
     updateBrainConfig(dir, 'private');
     assert.deepEqual(checkBrain(dir, 'private', 'off').errors, []);
 });
-
-function stubClaude(exitCode = 0): { bin: string; log: string } {
-    const bin = mkdtempSync(join(tmpdir(), 'claude-bin-'));
-    const log = join(bin, 'calls.log');
-    writeFileSync(join(bin, 'claude'), `#!/bin/sh\necho "$(pwd)|$*" >> "$CLAUDE_STUB_LOG"\nexit ${exitCode}\n`);
-    chmodSync(join(bin, 'claude'), 0o755);
-    return { bin, log };
-}
 
 test('cli init activates the plugin in project scope', () => {
     const repo = project();

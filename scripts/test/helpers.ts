@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { installPushGuard } from '../src/guard.ts';
@@ -182,4 +182,13 @@ export function runCli(root: string, args: string[], input = '', cwd = root, env
         { cwd, env, input, encoding: 'utf8' },
     );
     return { status: result.status, stdout: result.stdout, stderr: result.stderr };
+}
+
+/** Fake claude CLI that logs "<cwd>|<args>" to $CLAUDE_STUB_LOG, runs an optional shell snippet and exits with exitCode. */
+export function stubClaude(exitCode = 0, script = ''): { bin: string; log: string } {
+    const bin = mkdtempSync(join(tmpdir(), 'claude-bin-'));
+    const log = join(bin, 'calls.log');
+    writeFileSync(join(bin, 'claude'), `#!/bin/sh\necho "$(pwd)|$*" >> "$CLAUDE_STUB_LOG"\n${script}\nexit ${exitCode}\n`);
+    chmodSync(join(bin, 'claude'), 0o755);
+    return { bin, log };
 }

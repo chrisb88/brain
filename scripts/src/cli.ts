@@ -42,6 +42,11 @@ Commands:
       "knowledge"). --private also installs the push guard, requires a repository without remote
       and creates the repository if needed. Enables the brain plugin for the project
       (.claude/settings.json). Never commits.
+  setup
+      Set up a cloned repository on this machine: enable the brain plugin for the project (Claude
+      Code registers project plugins per checkout), build INDEX.md and graph.json and create the qmd
+      index for the current BRAIN_SEARCH level (hybrid downloads ~2.5 GB of models). Run once per
+      clone, then (re)start Claude Code in the repository root.
   init --update
       Refresh the knowledge folder files from template/ (and the push guard in private mode).
       Never touches data.
@@ -143,6 +148,10 @@ function initQmd(brainDir: string): void {
     if (!isQmdInstalled()) {
         console.log('Hinweis: qmd nicht gefunden – später im Wissens-Ordner „brain qmd setup“ ausführen.');
         return;
+    }
+    if (level === 'hybrid') {
+        console.log('Hinweis: BRAIN_SEARCH=hybrid lädt beim ersten Mal ~2.5 GB Modelle herunter (Abbruch mit Strg+C). '
+            + 'Ohne Modelle: BRAIN_SEARCH=keyword brain setup – und BRAIN_SEARCH=keyword dauerhaft setzen, z. B. in ~/.zshrc.');
     }
     try {
         setupQmd(brainDir, level);
@@ -319,6 +328,19 @@ function run(argv: string[], now: Date): number {
             }
             return runQmd(root, rest);
         }
+        case 'setup': {
+            if (rest.length > 0) {
+                throw new Error('Verwendung: brain setup');
+            }
+            console.log(activatePlugin(config?.configRoot ?? root)
+                ? 'Plugin brain@brain für dieses Projekt aktiviert.'
+                : `Hinweis: Plugin nicht aktiviert – im Repo ausführen: ${PLUGIN_INSTALL_COMMAND}`);
+            runIndex(root);
+            console.log('INDEX.md und graph.json erzeugt');
+            initQmd(root);
+            console.log('Nächster Schritt: Claude Code im Repo-Root (neu) starten.');
+            return 0;
+        }
         case 'init': {
             const { values, positionals } = parseArgs({
                 args: rest,
@@ -354,6 +376,7 @@ function run(argv: string[], now: Date): number {
                 ? 'Plugin brain@brain für dieses Projekt aktiviert.'
                 : `Hinweis: Plugin nicht aktiviert – im Repo ausführen: ${PLUGIN_INSTALL_COMMAND}`);
             console.log('Nächster Schritt: Änderungen prüfen und committen, dann Claude Code im Repo starten.');
+            console.log('Teammitglieder führen nach dem Klonen einmal „brain setup“ im Repo aus.');
             return 0;
         }
         case 'session-start': {

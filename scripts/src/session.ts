@@ -20,7 +20,7 @@ export function sessionLines(config: BrainConfig, pluginRoot: string, level: Sea
     const folder = config.path === '.' ? './' : `${config.path}/`;
     const lines = [`Brain: ${folder} (mode: ${config.mode}, search: ${level})`];
     if (level !== 'off' && !qmdReady) {
-        lines.push('Brain: Hinweis – qmd-Index fehlt – einmal „brain qmd setup“ im Repository ausführen');
+        lines.push('Brain: Hinweis – qmd-Index fehlt – einmal „brain setup“ im Repository ausführen');
     }
     const cli = cliVersion();
     let plugin: string;
