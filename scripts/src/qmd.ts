@@ -129,6 +129,9 @@ export function qmdCheck(root: string, level: SearchLevel): { errors: string[]; 
         hints.push(`qmd-Index für diesen Wissens-Ordner fehlt (${name}) – brain qmd setup ausführen`);
         return { errors, hints };
     }
+    if (!existsSync(join(qmdCacheDir(), `${name}.sqlite`))) {
+        hints.push(`qmd-Index ${name}: Datenbank fehlt – brain qmd setup ausführen`);
+    }
     const config = readYaml(file);
     for (const collection of ['wiki', 'archive']) {
         const path = field(config, 'collections', collection, 'path');

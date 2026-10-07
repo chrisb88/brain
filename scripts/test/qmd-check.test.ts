@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -7,12 +7,25 @@ import { stringify } from 'yaml';
 import { QMD_EMBED_MODEL, qmdCheck, qmdIndexName } from '../src/qmd.ts';
 import { emptyDir, TEST_QMD_CONFIG_DIR, validBrain } from './helpers.ts';
 
-function withConfig(root: string, content: object | null): void {
+const TEST_CACHE_HOME = process.env.XDG_CACHE_HOME;
+
+/** Writes the index config (if any) and, unless withoutDatabase, the index database file. */
+function withConfig(root: string, content: object | null, withoutDatabase = false): void {
     const dir = mkdtempSync(join(tmpdir(), 'qmd-config-'));
     process.env.QMD_CONFIG_DIR = dir;
+    process.env.XDG_CACHE_HOME = mkdtempSync(join(tmpdir(), 'xdg-cache-'));
     if (content !== null) {
         writeFileSync(join(dir, `${qmdIndexName(root)}.yml`), stringify(content));
     }
+    if (!withoutDatabase) {
+        mkdirSync(join(process.env.XDG_CACHE_HOME, 'qmd'));
+        writeFileSync(join(process.env.XDG_CACHE_HOME, 'qmd', `${qmdIndexName(root)}.sqlite`), '');
+    }
+}
+
+function restoreEnv(): void {
+    process.env.QMD_CONFIG_DIR = TEST_QMD_CONFIG_DIR;
+    process.env.XDG_CACHE_HOME = TEST_CACHE_HOME;
 }
 
 function collections(root: string, wiki = join(root, 'wiki'), archive = join(root, 'archive')): object {
@@ -37,7 +50,7 @@ for (const [label, level, content, error, hint] of cases) {
             withConfig(root, content(root));
             report = qmdCheck(root, level);
         } finally {
-            process.env.QMD_CONFIG_DIR = TEST_QMD_CONFIG_DIR;
+            restoreEnv();
         }
         if (error === null) {
             assert.deepEqual(report.errors, []);
@@ -51,3 +64,16 @@ for (const [label, level, content, error, hint] of cases) {
         }
     });
 }
+
+test('qmdCheck: missing index database hints at brain qmd setup', () => {
+    const root = validBrain();
+    let report: ReturnType<typeof qmdCheck>;
+    try {
+        withConfig(root, collections(root), true);
+        report = qmdCheck(root, 'keyword');
+    } finally {
+        restoreEnv();
+    }
+    assert.deepEqual(report.errors, []);
+    assert.deepEqual(report.hints, [`qmd-Index ${qmdIndexName(root)}: Datenbank fehlt – brain qmd setup ausführen`]);
+});

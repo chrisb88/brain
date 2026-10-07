@@ -12,7 +12,7 @@ Based on the approach by [The Node AI](https://www.youtube.com/watch?v=mHSOsy_us
 
 ## Features
 
-- **Markdown is the single source of truth** – Obsidian-compatible (`[[wiki links]]`, YAML frontmatter, callouts).
+- **Markdown is the single source of truth** – Obsidian-compatible (`[[wiki links]]`, YAML frontmatter, callouts). Your knowledge exists only in the knowledge folder; everything else can be rebuilt (see [What is your knowledge](#what-is-your-knowledge-and-what-can-be-rebuilt)).
 - **Originals are never modified** – notes are archived byte-identical under `archive/<category>/YYYY/MM/`.
 - **Condense, don't accumulate** – new knowledge is merged into existing entries; conflicts and open questions are marked and reported by `brain check`.
 - **Strict categories** – new categories only with approval, otherwise `_uncategorized`.
@@ -88,6 +88,23 @@ Set per machine, e.g. in `~/.zshrc`:
 | `off` | `INDEX.md` and grep | nothing – disable the `qmd` MCP server once via `/mcp` |
 
 After changing the level run `brain qmd setup` in the repository. Each knowledge folder has its own qmd index (`brain-<repo>-<hash>`); `brain qmd prune` removes indexes of knowledge folders that no longer exist.
+
+## What is your knowledge and what can be rebuilt
+
+**Your knowledge lives only in the knowledge folder** – `archive/` (the original notes), `wiki/` (the condensed entries) and `categories.yml` – together with `brain.yml` at the repository root. Commit it and keep the repository backed up (project mode: the project's remote; private mode: no remote by design, so back up the repository yourself). Losing these files means losing knowledge.
+
+Not committed and not rebuildable: notes waiting in `inbox/` exist only on your machine until `/brain:ingest` archives them, and `LOG.md` is a local log of brain operations (history only, no knowledge).
+
+Everything else is derived from those files and can be deleted and rebuilt at any time:
+
+| What | Where | Rebuild with |
+|---|---|---|
+| `INDEX.md`, `graph.json` | knowledge folder (not committed) | `brain index` – also runs in the background at every session start |
+| qmd index (config and database) | `~/.config/qmd/brain-<repo>-<hash>.yml`, `~/.cache/qmd/brain-<repo>-<hash>.sqlite` | `brain qmd setup` – `hybrid` re-embeds all entries; the models stay cached in `~/.cache/qmd/models` |
+| Plugin installation for this checkout | Claude Code (`~/.claude/plugins`) | `brain setup` |
+| brain CLI | your brain clone | `./install.sh` |
+
+`brain setup` rebuilds all of it for a repository in one go. `brain check` reports a missing or incomplete qmd index.
 
 ## CLI
 
