@@ -1,0 +1,5 @@
+{
+  "mcpServers": {
+    "qmd": { "command": "brain", "args": ["qmd", "mcp"] }
+  }
+}

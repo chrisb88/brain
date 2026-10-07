@@ -1,0 +1,11 @@
+{
+  "name": "brain",
+  "owner": { "name": "chris" },
+  "plugins": [
+    {
+      "name": "brain",
+      "source": "./plugin",
+      "description": "Ingest notes into a condensed wiki and answer questions from it."
+    }
+  ]
+}

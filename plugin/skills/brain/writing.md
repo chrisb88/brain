@@ -1,12 +1,12 @@
 # Schreibregeln für Wissenseinträge
 
-Gilt für jede Datei in `wiki/<kategorie>/`. Format: Spec Abschnitt 4.3.
+Gilt für jede Datei in `wiki/<kategorie>/` des Wissens-Ordners.
 
 ## Anlegen und verknüpfen
 
 - Neue Einträge NUR mit `brain remember` anlegen. Der Body kommt über stdin, ohne `# Titel`-Überschrift und ohne `## Sources` (beides schreibt das CLI).
 - Beziehungen NUR mit `brain link a b [c …]` / `brain link --remove a b` setzen oder entfernen. `## Related` nie von Hand bearbeiten.
-- Nach jedem neuen oder geänderten Eintrag verwandte Einträge suchen (INDEX.md, qmd `query` auf `wiki`) und verknüpfen – auch kategorieübergreifend.
+- Nach jedem neuen oder geänderten Eintrag verwandte Einträge suchen (Suchleiter im Skill, Schritt 1–2, gemäß Suchstufe) und verknüpfen – auch kategorieübergreifend.
 - Genau eine Kategorie pro Eintrag; bei Unklarheit gewinnt das Hauptthema, der Rest wird verlinkt.
 
 ## Verdichten statt anhängen
@@ -24,7 +24,7 @@ Gilt für jede Datei in `wiki/<kategorie>/`. Format: Spec Abschnitt 4.3.
       > Affects: [[wiki/a/x]], [[wiki/b/y]]
       > <deutsche Beschreibung mit Quellenlinks>
 
-  Für Unklarheiten `> [!question] Unclear Q-YYYYMMDD-N`. N zählt pro Tag hoch; vorher prüfen, dass die ID frei ist: `grep -rn "C-YYYYMMDD-" wiki/`.
+  Für Unklarheiten `> [!question] Unclear Q-YYYYMMDD-N`. N zählt pro Tag hoch; vorher prüfen, dass die ID frei ist: `cd <Wissens-Ordner> && grep -rn "C-YYYYMMDD-" wiki/`.
 - Auflösen: Inhalt korrigieren und den Callout mit dieser ID aus ALLEN betroffenen Einträgen entfernen.
 - `brain check` erzwingt die Konsistenz.
 
@@ -38,4 +38,4 @@ Gilt für jede Datei in `wiki/<kategorie>/`. Format: Spec Abschnitt 4.3.
 
 - Deutscher Text, Fachbegriffe im Original.
 - Nie Geheimnisse (Passwörter, Tokens, Keys) übernehmen – stattdessen den Nutzer darauf hinweisen.
-- Links immer als vollständiger Pfad ab Repo-Wurzel ohne `.md`: `[[wiki/kategorie/eintrag]]`, `[[wiki/kategorie/eintrag#Überschrift]]`.
+- Links immer als vollständiger Pfad ab Wissens-Ordner ohne `.md`: `[[wiki/kategorie/eintrag]]`, `[[wiki/kategorie/eintrag#Überschrift]]`.
