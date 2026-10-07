@@ -46,6 +46,7 @@ test('uninstall.sh removes the CLI, lists brain qmd indexes without a terminal a
     assert.ok(existsSync(join(cache, 'brain-kb-1234abcd.sqlite')));
     assert.match(String(result.stdout), /claude plugin uninstall brain@brain --scope project/);
     assert.match(String(result.stdout), /Wissens-Ordner/);
+    assert.match(String(result.stdout), /npm rm -g @tobilu\/qmd/);
 });
 
 test('uninstall.sh --yes deletes only brain qmd indexes', () => {
