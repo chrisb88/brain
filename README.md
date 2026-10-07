@@ -36,7 +36,7 @@ cd brain
 
 Update: `git pull && ./install.sh` and `claude plugin update brain@brain`.
 
-To update the plugin automatically, enable auto-update for the marketplace once: `/plugin` → Marketplaces → `brain` → Enable auto-update (third-party marketplaces are not auto-updated by default). Claude Code then updates the plugin at startup; the change takes effect after the next restart. The CLI still needs `git pull` in your brain clone – if plugin and CLI versions differ, the session start prints a warning.
+Projects set up with `brain init` update the plugin automatically (`autoUpdate` on the `brain` marketplace in `.claude/settings.json`). Elsewhere, e.g. for a private brain, enable it once: `/plugin` → Marketplaces tab → `brain` → Enable auto-update (third-party marketplaces are not auto-updated by default). Claude Code checks for updates during a session; the new version loads at the next start. The CLI still needs `git pull` in your brain clone – if plugin and CLI versions differ, the session start prints a warning.
 
 ## Create a knowledge folder
 
@@ -55,7 +55,7 @@ mkdir ~/knowledge && cd ~/knowledge
 brain init --private .
 ```
 
-`brain init` also enables the plugin for the project: it declares the `brain` marketplace and the plugin in `.claude/settings.json` (`extraKnownMarketplaces`, `enabledPlugins`). Team members run `brain setup` once after cloning (see below). If `brain init` printed a `claude plugin …` hint instead, run that command first – `.claude/settings.json` only exists afterwards.
+`brain init` also enables the plugin for the project: it declares the `brain` marketplace and the plugin in `.claude/settings.json` (`extraKnownMarketplaces` with `autoUpdate`, `enabledPlugins`). Team members run `brain setup` once after cloning (see below). If `brain init` printed a `claude plugin …` hint instead, run that command first – `.claude/settings.json` only exists afterwards.
 
 `brain init` never commits.
 
