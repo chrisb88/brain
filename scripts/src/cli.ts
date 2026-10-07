@@ -5,7 +5,7 @@ import { parseArgs } from 'node:util';
 import { archiveNote } from './archive.ts';
 import { addCategory, listCategories } from './category.ts';
 import { checkBrain } from './check.ts';
-import { brainConfig } from './config.ts';
+import { brainConfig, brainStarts, findBrainConfig } from './config.ts';
 import { runIndex } from './indexer.ts';
 import { initBrain, updateBrainConfig } from './init.ts';
 import { linkEntries } from './link.ts';
@@ -17,6 +17,8 @@ import { findOrphanIndexes, isQmdInstalled, removeIndex, runQmd, setupQmd } from
 import { mergeCategory, moveEntry, renameCategory } from './recategorize.ts';
 import { remember } from './remember.ts';
 import { searchLevel } from './search.ts';
+import { sessionLines, startBackgroundRefresh } from './session.ts';
+import { cliVersion } from './version.ts';
 
 const HELP = `brain – command line tool for the second brain knowledge base
 
@@ -142,7 +144,11 @@ function run(argv: string[], now: Date): number {
         console.log(HELP);
         return 0;
     }
-    const needsBrain = !(command === 'init' || (command === 'qmd' && rest[0] === 'prune'));
+    if (command === '--version') {
+        console.log(cliVersion());
+        return 0;
+    }
+    const needsBrain = !(command === 'init' || command === 'session-start' || (command === 'qmd' && rest[0] === 'prune'));
     const config = needsBrain ? brainConfig() : null;
     const root = config?.brainDir ?? '';
     switch (command) {
@@ -333,6 +339,20 @@ function run(argv: string[], now: Date): number {
                 ? 'Plugin brain@brain für dieses Projekt aktiviert.'
                 : `Hinweis: Plugin nicht aktiviert – im Repo ausführen: ${PLUGIN_INSTALL_COMMAND}`);
             console.log('Nächster Schritt: Änderungen prüfen und committen, dann Claude Code im Repo starten.');
+            return 0;
+        }
+        case 'session-start': {
+            try {
+                const found = findBrainConfig(brainStarts(), process.env.BRAIN_ROOT);
+                if (found === null) {
+                    return 0;
+                }
+                const level = searchLevel();
+                console.log(sessionLines(found, rest[0] ?? '', level).join('\n'));
+                startBackgroundRefresh(found, level);
+            } catch (error) {
+                console.log(`Brain: Hinweis – ${(error as Error).message}`);
+            }
             return 0;
         }
         default:
