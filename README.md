@@ -36,6 +36,8 @@ cd brain
 
 Update: `git pull && ./install.sh` and `claude plugin update brain@brain`.
 
+To update the plugin automatically, enable auto-update for the marketplace once: `/plugin` → Marketplaces → `brain` → Enable auto-update (third-party marketplaces are not auto-updated by default). Claude Code then updates the plugin at startup; the change takes effect after the next restart. The CLI still needs `git pull` in your brain clone – if plugin and CLI versions differ, the session start prints a warning.
+
 ## Create a knowledge folder
 
 In a project repository:
