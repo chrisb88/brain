@@ -40,7 +40,8 @@ Commands:
       Create a knowledge folder in the current git repository: brain.yml at the repository root and the
       knowledge folder at <path>, relative to the repository root (asked for when missing, default
       "knowledge"). --private also installs the push guard, requires a repository without remote
-      and creates the repository if needed. Never commits.
+      and creates the repository if needed. Enables the brain plugin for the project
+      (.claude/settings.json). Never commits.
   init --update
       Refresh the knowledge folder files from template/ (and the push guard in private mode).
       Never touches data.
