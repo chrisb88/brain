@@ -7,7 +7,7 @@ import { parse } from 'yaml';
 import { checkBrain } from '../src/check.ts';
 import { QMD_EMBED_MODEL, qmdConfigPath, qmdIndexName, setupQmd } from '../src/qmd.ts';
 import { slugify } from '../src/slug.ts';
-import { CATEGORIES, makeBrain, projectWithBrain, runCli, validBrain } from './helpers.ts';
+import { CATEGORIES, makeBrain, projectWithBrain, runCli, TEST_QMD_CONFIG_DIR, validBrain } from './helpers.ts';
 
 function stubQmd(): { bin: string; log: string } {
     const bin = mkdtempSync(join(tmpdir(), 'qmd-bin-'));
@@ -29,8 +29,11 @@ test('qmdIndexName uses the repository folder name and a hash of the knowledge f
 test('qmdConfigPath honors QMD_CONFIG_DIR', () => {
     const root = makeBrain();
     process.env.QMD_CONFIG_DIR = '/tmp/qmd-config';
-    assert.equal(qmdConfigPath(root), `/tmp/qmd-config/${qmdIndexName(root)}.yml`);
-    delete process.env.QMD_CONFIG_DIR;
+    try {
+        assert.equal(qmdConfigPath(root), `/tmp/qmd-config/${qmdIndexName(root)}.yml`);
+    } finally {
+        process.env.QMD_CONFIG_DIR = TEST_QMD_CONFIG_DIR;
+    }
 });
 
 test('brain qmd passes arguments, index and exit code through', () => {
@@ -90,8 +93,12 @@ test('setupQmd creates collections, contexts, sets the embed model and indexes',
 test('check hints when the qmd index of the brain is missing', () => {
     const root = validBrain();
     process.env.QMD_CONFIG_DIR = mkdtempSync(join(tmpdir(), 'qmd-config-'));
-    const hints = checkBrain(root).hints.join('\n');
-    delete process.env.QMD_CONFIG_DIR;
+    let hints: string;
+    try {
+        hints = checkBrain(root).hints.join('\n');
+    } finally {
+        process.env.QMD_CONFIG_DIR = TEST_QMD_CONFIG_DIR;
+    }
     assert.match(hints, new RegExp(`qmd-Index für diesen Wissens-Ordner fehlt \\(${qmdIndexName(root)}\\) – brain qmd setup ausführen`));
 });
 
@@ -133,14 +140,14 @@ test('brain qmd setup with BRAIN_SEARCH=off does nothing', () => {
 
 test('brain qmd mcp with BRAIN_SEARCH=off fails with a hint', () => {
     const root = makeBrain({ 'categories.yml': CATEGORIES });
-    const result = runCli(root, ['qmd', 'mcp'], '', root, { BRAIN_SEARCH: 'off' });
+    const result = runCli(root, ['qmd', 'mcp'], '', root, { BRAIN_SEARCH: 'off', PATH: '/usr/bin:/bin' });
     assert.equal(result.status, 1);
     assert.match(result.stderr, /BRAIN_SEARCH=off – qmd-MCP-Server bitte über \/mcp deaktivieren/);
 });
 
 test('brain qmd rejects an invalid BRAIN_SEARCH', () => {
     const root = makeBrain({ 'categories.yml': CATEGORIES });
-    const result = runCli(root, ['qmd', 'status'], '', root, { BRAIN_SEARCH: 'fast' });
+    const result = runCli(root, ['qmd', 'status'], '', root, { BRAIN_SEARCH: 'fast', PATH: '/usr/bin:/bin' });
     assert.equal(result.status, 1);
     assert.match(result.stderr, /BRAIN_SEARCH=fast ist ungültig/);
 });

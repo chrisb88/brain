@@ -13,7 +13,7 @@ import { appendLog, isLogOp } from './log.ts';
 import { callerDir } from './paths.ts';
 import { activatePlugin, PLUGIN_INSTALL_COMMAND } from './plugin.ts';
 import { promptLine } from './prompt.ts';
-import { findOrphanIndexes, isQmdInstalled, removeIndex, runQmd, setupQmd } from './qmd.ts';
+import { findOrphanIndexes, isQmdInstalled, qmdIndexReady, removeIndex, runQmd, setupQmd } from './qmd.ts';
 import { mergeCategory, moveEntry, renameCategory } from './recategorize.ts';
 import { remember } from './remember.ts';
 import { searchLevel } from './search.ts';
@@ -38,9 +38,9 @@ Environment:
 Commands:
   init [--private] [<path>]
       Create a knowledge folder in the current git repository: brain.yml at the repository root and the
-      knowledge folder at <path> (asked for when missing, default "knowledge"). --private also
-      installs the push guard, requires a repository without remote and creates the
-      repository if needed. Never commits.
+      knowledge folder at <path>, relative to the repository root (asked for when missing, default
+      "knowledge"). --private also installs the push guard, requires a repository without remote
+      and creates the repository if needed. Never commits.
   init --update
       Refresh the knowledge folder files from template/ (and the push guard in private mode).
       Never touches data.
@@ -362,8 +362,9 @@ function run(argv: string[], now: Date): number {
                     return 0;
                 }
                 const level = searchLevel();
-                console.log(sessionLines(found, rest[0] ?? '', level).join('\n'));
-                startBackgroundRefresh(found, level);
+                const qmdReady = level !== 'off' && qmdIndexReady(found.brainDir);
+                console.log(sessionLines(found, rest[0] ?? '', level, qmdReady).join('\n'));
+                startBackgroundRefresh(found, qmdReady);
             } catch (error) {
                 console.log(`Brain: Hinweis – ${(error as Error).message}`);
             }

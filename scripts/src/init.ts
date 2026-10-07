@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { saveCategories } from './categories.ts';
 import { CONFIG_FILE, type BrainMode, formatBrainConfig } from './config.ts';
@@ -96,6 +96,11 @@ export function initBrain(options: InitOptions): InitResult {
     if (path === null) {
         throw new Error(`${requested} liegt außerhalb des Repositorys ${configRoot}`);
     }
+    for (let dir = brainDir; dir !== configRoot; dir = dirname(dir)) {
+        if (existsSync(dir) && !statSync(dir).isDirectory()) {
+            throw new Error(`${requested} ist kein Ordner – anderen Wissens-Ordner wählen`);
+        }
+    }
     for (const name of RESERVED) {
         if (existsSync(join(brainDir, name))) {
             throw new Error(`${name} existiert bereits in ${brainDir} – anderen Wissens-Ordner wählen`);
@@ -105,7 +110,6 @@ export function initBrain(options: InitOptions): InitResult {
     if (createdRepo) {
         execFileSync('git', ['-C', cwd, 'init', '-q'], { stdio: 'pipe' });
     }
-    writeFileSync(join(configRoot, CONFIG_FILE), formatBrainConfig(path, mode));
     mkdirSync(brainDir, { recursive: true });
     updateBrainConfig(brainDir, mode, options.templateDir);
     for (const dir of ['inbox', 'archive', 'wiki']) {
@@ -114,5 +118,6 @@ export function initBrain(options: InitOptions): InitResult {
     writeFileSync(join(brainDir, 'inbox', '.gitkeep'), '');
     saveCategories(brainDir, []);
     runIndex(brainDir);
+    writeFileSync(join(configRoot, CONFIG_FILE), formatBrainConfig(path, mode));
     return { configRoot, brainDir, mode, createdRepo };
 }

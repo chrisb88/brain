@@ -16,9 +16,12 @@ export function pluginVersion(pluginRoot: string): string {
 }
 
 /** Lines the SessionStart hook prints into Claude's context. */
-export function sessionLines(config: BrainConfig, pluginRoot: string, level: SearchLevel): string[] {
+export function sessionLines(config: BrainConfig, pluginRoot: string, level: SearchLevel, qmdReady: boolean): string[] {
     const folder = config.path === '.' ? './' : `${config.path}/`;
     const lines = [`Brain: ${folder} (mode: ${config.mode}, search: ${level})`];
+    if (level !== 'off' && !qmdReady) {
+        lines.push('Brain: Hinweis – qmd-Index fehlt – einmal „brain qmd setup“ im Repository ausführen');
+    }
     const cli = cliVersion();
     let plugin: string;
     try {
@@ -37,15 +40,16 @@ function quote(arg: string): string {
     return `'${arg.replaceAll("'", `'\\''`)}'`;
 }
 
-/** Runs brain index (and qmd update unless off) in a detached process; returns immediately. */
-export function startBackgroundRefresh(config: BrainConfig, level: SearchLevel): void {
+/** Runs brain index (and qmd update if requested) in a detached process; returns immediately. */
+export function startBackgroundRefresh(config: BrainConfig, updateQmd: boolean): void {
     const brain = (...args: string[]): string => [process.execPath, '--disable-warning=ExperimentalWarning', CLI, ...args].map(quote).join(' ');
-    const script = level === 'off' ? brain('index') : `${brain('index')} && ${brain('qmd', 'update')}`;
+    const script = updateQmd ? `${brain('index')} && ${brain('qmd', 'update')}` : brain('index');
     const child = spawn('sh', ['-c', script], {
         cwd: config.brainDir,
         detached: true,
         stdio: 'ignore',
         env: { ...process.env, BRAIN_ROOT: config.configRoot },
     });
+    child.on('error', () => {});
     child.unref();
 }

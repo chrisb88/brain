@@ -4,6 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { setTimeout as sleep } from 'node:timers/promises';
+import { stringify } from 'yaml';
+import { qmdIndexName } from '../src/qmd.ts';
 import { cliVersion } from '../src/version.ts';
 import { emptyDir, projectWithBrain, runCli, writeFile } from './helpers.ts';
 
@@ -53,16 +55,24 @@ for (const [label, version, env, expected] of warnings) {
     });
 }
 
+function stubQmd(delay: number): { bin: string; marker: string } {
+    const bin = mkdtempSync(join(tmpdir(), 'qmd-bin-'));
+    const marker = join(bin, 'marker');
+    writeFileSync(join(bin, 'qmd'), `#!/bin/sh\nsleep ${delay}\necho "$*" > "${marker}"\n`);
+    chmodSync(join(bin, 'qmd'), 0o755);
+    return { bin, marker };
+}
+
 for (const folder of ['knowledge', 'Mein Wissen']) {
     test(`session-start refreshes index and qmd in the background without waiting (${folder})`, async () => {
         const { repo, brain } = projectWithBrain(folder);
         const nested = join(repo, 'docs');
         writeFile(nested, 'x.md', 'x');
-        const bin = mkdtempSync(join(tmpdir(), 'qmd-bin-'));
-        const marker = join(bin, 'marker');
-        writeFileSync(join(bin, 'qmd'), `#!/bin/sh\nsleep 5\necho "$*" > "${marker}"\n`);
-        chmodSync(join(bin, 'qmd'), 0o755);
-        const result = sessionStart(nested, pluginDir(cliVersion()), { BRAIN_SEARCH: 'keyword', PATH: `${bin}:/usr/bin:/bin` });
+        const config = mkdtempSync(join(tmpdir(), 'qmd-config-'));
+        writeFileSync(join(config, `${qmdIndexName(brain)}.yml`), stringify({ collections: { wiki: { path: join(brain, 'wiki') } } }));
+        const { bin, marker } = stubQmd(5);
+        const result = sessionStart(nested, pluginDir(cliVersion()), { BRAIN_SEARCH: 'keyword', PATH: `${bin}:/usr/bin:/bin`, QMD_CONFIG_DIR: config });
+        assert.doesNotMatch(result.stdout, /qmd-Index fehlt/);
         assert.equal(result.status, 0, result.stderr);
         assert.equal(existsSync(marker), false, 'session-start must not wait for the refresh');
         for (let i = 0; i < 150 && !existsSync(marker); i++) {
@@ -72,3 +82,20 @@ for (const folder of ['knowledge', 'Mein Wissen']) {
         assert.ok(existsSync(join(brain, 'INDEX.md')));
     });
 }
+
+test('session-start without a qmd index hints at brain qmd setup and only refreshes the index', async () => {
+    const { repo, brain } = projectWithBrain();
+    const { bin, marker } = stubQmd(0);
+    const result = sessionStart(repo, pluginDir(cliVersion()), { BRAIN_SEARCH: 'keyword', PATH: `${bin}:/usr/bin:/bin` });
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /^Brain: Hinweis – qmd-Index fehlt – einmal „brain qmd setup“ im Repository ausführen$/m);
+    for (let i = 0; i < 150 && !existsSync(join(brain, 'INDEX.md')); i++) {
+        await sleep(100);
+    }
+    assert.ok(existsSync(join(brain, 'INDEX.md')));
+    // Grace period: a wrongly started qmd update would write the marker about 2 s after INDEX.md appears.
+    for (let i = 0; i < 40 && !existsSync(marker); i++) {
+        await sleep(100);
+    }
+    assert.equal(existsSync(marker), false, 'qmd must not be called without an index');
+});

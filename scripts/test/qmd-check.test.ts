@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { stringify } from 'yaml';
 import { QMD_EMBED_MODEL, qmdCheck, qmdIndexName } from '../src/qmd.ts';
-import { emptyDir, validBrain } from './helpers.ts';
+import { emptyDir, TEST_QMD_CONFIG_DIR, validBrain } from './helpers.ts';
 
 function withConfig(root: string, content: object | null): void {
     const dir = mkdtempSync(join(tmpdir(), 'qmd-config-'));
@@ -23,6 +23,8 @@ const cases: Array<[string, 'hybrid' | 'keyword' | 'off', (root: string) => obje
     ['missing config hints', 'hybrid', () => null, null, /qmd-Index für diesen Wissens-Ordner fehlt/],
     ['missing config ignored when off', 'off', () => null, null, null],
     ['foreign wiki path is an error', 'keyword', (root) => collections(root, emptyDir()), /Collection wiki zeigt auf .* statt /, null],
+    ['foreign archive path is an error', 'keyword', (root) => collections(root, join(root, 'wiki'), emptyDir()), /Collection archive zeigt auf .* statt /, null],
+    ['missing archive collection hints', 'keyword', (root) => ({ collections: { wiki: { path: join(root, 'wiki'), pattern: '*/*.md' } } }), null, /Collection archive fehlt/],
     ['matching keyword index is fine', 'keyword', (root) => collections(root), null, null],
     ['hybrid without model hints', 'hybrid', (root) => collections(root), null, /Embedding-Modell fehlt oder veraltet/],
     ['hybrid with model is fine', 'hybrid', (root) => ({ ...collections(root), models: { embed: QMD_EMBED_MODEL } }), null, null],
@@ -30,9 +32,13 @@ const cases: Array<[string, 'hybrid' | 'keyword' | 'off', (root: string) => obje
 for (const [label, level, content, error, hint] of cases) {
     test(`qmdCheck: ${label}`, () => {
         const root = validBrain();
-        withConfig(root, content(root));
-        const report = qmdCheck(root, level);
-        delete process.env.QMD_CONFIG_DIR;
+        let report: ReturnType<typeof qmdCheck>;
+        try {
+            withConfig(root, content(root));
+            report = qmdCheck(root, level);
+        } finally {
+            process.env.QMD_CONFIG_DIR = TEST_QMD_CONFIG_DIR;
+        }
         if (error === null) {
             assert.deepEqual(report.errors, []);
         } else {

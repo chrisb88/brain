@@ -6,6 +6,10 @@ import { installPushGuard } from '../src/guard.ts';
 
 delete process.env.BRAIN_SEARCH;
 delete process.env.INDEX_PATH;
+// Keep every test (in-process and via runCli) away from the real qmd config and cache.
+process.env.QMD_CONFIG_DIR = mkdtempSync(join(tmpdir(), 'qmd-config-'));
+process.env.XDG_CACHE_HOME = mkdtempSync(join(tmpdir(), 'xdg-cache-'));
+export const TEST_QMD_CONFIG_DIR = process.env.QMD_CONFIG_DIR;
 
 export const NOW = new Date(2026, 9, 3, 15, 30);
 export const FIXED_MTIME = new Date('2026-10-02T15:30:00Z');

@@ -12,6 +12,7 @@ brain legt Wissen als Markdown-Dateien in einem Wissens-Ordner dieses Repositori
 - Beim Sitzungsstart steht im Kontext eine Zeile wie `Brain: knowledge/ (mode: project, search: hybrid)`: Wissens-Ordner (relativ zum Repo-Root), Modus und Suchstufe. Fehlt sie: `brain check` ausführen; meldet es „Kein Wissens-Ordner gefunden“, gibt es hier keinen.
 - Alle Pfade in diesem Skill sind relativ zum Wissens-Ordner. Shell-Befehle immer im Wissens-Ordner ausführen: `cd <Wissens-Ordner> && …`.
 - Steht in der Kontextzeile eine Warnung (Versionen passen nicht, ungültige Suchstufe), den Nutzer einmal darauf hinweisen.
+- Steht im Kontext eine Hinweis-Zeile wie `Brain: Hinweis – qmd-Index fehlt – …`, den Nutzer einmal darauf hinweisen (hier: einmal `brain qmd setup` im Repository ausführen).
 
 ## Aufbau
 

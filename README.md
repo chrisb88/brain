@@ -53,7 +53,9 @@ mkdir ~/knowledge && cd ~/knowledge
 brain init --private .
 ```
 
-`brain init` never commits. Team members who clone the project get the plugin offered when they start Claude Code; they only need `./install.sh` once. Until they have, the plugin prints a hint at session start (and the `qmd` MCP server cannot start).
+`.claude/settings.json` only exists after the plugin was activated successfully; if `brain init` printed a `claude plugin install …` hint instead, run that command first.
+
+`brain init` never commits. Team members who clone the project get the plugin offered when they start Claude Code; they need `./install.sh` once and `brain qmd setup` once per clone (unless `BRAIN_SEARCH=off`). Until they have, the plugin prints a hint at session start (and the `qmd` MCP server cannot start).
 
 ## Usage
 

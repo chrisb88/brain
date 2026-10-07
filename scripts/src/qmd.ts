@@ -111,6 +111,11 @@ function field(value: unknown, ...keys: string[]): unknown {
     return current;
 }
 
+/** True when this knowledge folder's qmd index config exists and has a wiki collection path. */
+export function qmdIndexReady(root: string): boolean {
+    return typeof field(readYaml(qmdConfigPath(root)), 'collections', 'wiki', 'path') === 'string';
+}
+
 /** Index checks for brain check: foreign collection paths are errors, everything else hints. */
 export function qmdCheck(root: string, level: SearchLevel): { errors: string[]; hints: string[] } {
     const errors: string[] = [];

@@ -84,6 +84,8 @@ const refusals: Array<[string, () => InitOptions, RegExp]> = [
     }, /Hier gibt es bereits einen Wissens-Ordner/],
     ['a path outside the repository', () => ({ cwd: project(), path: '../elsewhere', private: false }), /liegt außerhalb des Repositorys/],
     ['"." in a project with .gitignore and CLAUDE.md', () => ({ cwd: project(), path: '.', private: false }), /\.gitignore existiert bereits/],
+    ['a path that is an existing file', () => ({ cwd: project(), path: 'README.md', private: false }), /^Error: README\.md ist kein Ordner – anderen Wissens-Ordner wählen$/],
+    ['a path below an existing file', () => ({ cwd: project(), path: 'README.md/kb', private: false }), /^Error: README\.md\/kb ist kein Ordner – anderen Wissens-Ordner wählen$/],
     ['a missing path without prompt', () => ({ cwd: project(), private: false }), /Pfad angeben: brain init \[--private\] <pfad>/],
     ['--private with a remote', () => {
         const repo = project();
