@@ -135,7 +135,7 @@ Inhaltliche Änderungen gegenüber den bisherigen Vorlagen:
 4. Hintergrund-Aktualisierung als abgekoppelter Prozess (`spawn` mit `detached: true`, `stdio: 'ignore'`, `unref()`): `brain index`, bei Suchstufe ≠ `off` danach `brain qmd update`. Der Hook kehrt sofort zurück. Lässt sich das Abkoppeln nicht zuverlässig umsetzen, entfällt Schritt 4 (Index nur von Hand bzw. per `/brain:ingest`).
 5. Exit 0 auch bei Fehlern in Schritt 3–4 (der Hook darf eine Sitzung nie verhindern).
 
-**Aktivierung:** pro Projekt (`--scope project`, Abschnitt 5 Schritt 10). Spike in der Umsetzung: prüfen, ob `claude plugin install --scope project` den Marketplace (`extraKnownMarketplaces`) in `.claude/settings.json` einträgt, sodass Teammitglieder beim Start das Plugin angeboten bekommen. Falls nicht: README beschreibt den Eintrag, den das Projekt einmal von Hand ergänzt.
+**Aktivierung:** pro Projekt (`--scope project`, Abschnitt 5 Schritt 10). Spike in der Umsetzung: prüfen, ob `claude plugin install --scope project` den Marketplace (`extraKnownMarketplaces`) in `.claude/settings.json` einträgt, sodass Teammitglieder beim Start das Plugin angeboten bekommen. Falls nicht: README beschreibt den Eintrag, den das Projekt einmal von Hand ergänzt. **Ergebnis (Abnahme 2026-10-07):** `plugin install` trägt nur `enabledPlugins` ein; `brain init` ruft deshalb vorher `claude plugin marketplace add chrisb88/brain --scope project` auf, das `extraKnownMarketplaces` schreibt.
 
 **`install.sh`** (Repo-Root, POSIX-sh, idempotent):
 1. Prüft Node ≥ 24 und `git`.

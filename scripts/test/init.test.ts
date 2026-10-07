@@ -125,10 +125,10 @@ test('updateBrainConfig reinstalls a removed push guard in private mode', () => 
     assert.deepEqual(checkBrain(dir, 'private', 'off').errors, []);
 });
 
-function stubClaude(): { bin: string; log: string } {
+function stubClaude(exitCode = 0): { bin: string; log: string } {
     const bin = mkdtempSync(join(tmpdir(), 'claude-bin-'));
     const log = join(bin, 'calls.log');
-    writeFileSync(join(bin, 'claude'), '#!/bin/sh\necho "$(pwd)|$*" >> "$CLAUDE_STUB_LOG"\n');
+    writeFileSync(join(bin, 'claude'), `#!/bin/sh\necho "$(pwd)|$*" >> "$CLAUDE_STUB_LOG"\nexit ${exitCode}\n`);
     chmodSync(join(bin, 'claude'), 0o755);
     return { bin, log };
 }
@@ -142,7 +142,20 @@ test('cli init activates the plugin in project scope', () => {
     assert.match(result.stdout, /BRAIN_SEARCH=off – qmd wird nicht eingerichtet\./);
     assert.match(result.stdout, /Plugin brain@brain für dieses Projekt aktiviert\./);
     assert.match(result.stdout, /Änderungen prüfen und committen/);
-    assert.equal(readFileSync(log, 'utf8'), `${repo}|plugin install brain@brain --scope project\n`);
+    assert.equal(readFileSync(log, 'utf8'), [
+        `${repo}|plugin marketplace add chrisb88/brain --scope project`,
+        `${repo}|plugin install brain@brain --scope project`,
+        '',
+    ].join('\n'));
+});
+
+test('cli init stops after a failing marketplace registration and prints both commands', () => {
+    const repo = project();
+    const { bin, log } = stubClaude(1);
+    const result = runCli(repo, ['init', 'knowledge'], '', repo, { BRAIN_ROOT: '', PATH: `${bin}:/usr/bin:/bin`, CLAUDE_STUB_LOG: log, BRAIN_SEARCH: 'off' });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(readFileSync(log, 'utf8'), `${repo}|plugin marketplace add chrisb88/brain --scope project\n`);
+    assert.match(result.stdout, /claude plugin marketplace add chrisb88\/brain --scope project && claude plugin install brain@brain --scope project/);
 });
 
 test('cli init without claude and qmd prints hints', () => {
@@ -150,7 +163,7 @@ test('cli init without claude and qmd prints hints', () => {
     const result = runCli(repo, ['init', 'knowledge'], '', repo, { BRAIN_ROOT: '', PATH: '/usr/bin:/bin', BRAIN_SEARCH: '' });
     assert.equal(result.status, 0, result.stderr);
     assert.match(result.stdout, /qmd nicht gefunden/);
-    assert.match(result.stdout, /claude plugin install brain@brain --scope project/);
+    assert.match(result.stdout, /claude plugin marketplace add chrisb88\/brain --scope project && claude plugin install brain@brain --scope project/);
 });
 
 test('cli init without a path and without a terminal fails', () => {

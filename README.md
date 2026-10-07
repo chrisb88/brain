@@ -53,20 +53,9 @@ mkdir ~/knowledge && cd ~/knowledge
 brain init --private .
 ```
 
-`.claude/settings.json` only exists after the plugin was activated successfully; if `brain init` printed a `claude plugin install …` hint instead, run that command first.
+`brain init` also enables the plugin for the project: it declares the `brain` marketplace and the plugin in `.claude/settings.json` (`extraKnownMarketplaces`, `enabledPlugins`), so team members get the plugin offered when they start Claude Code. If `brain init` printed a `claude plugin …` hint instead, run that command first – `.claude/settings.json` only exists afterwards.
 
-`brain init` never commits. `claude plugin install --scope project` only records `enabledPlugins`, not where the plugin comes from. For a shared project add the marketplace once to `.claude/settings.json`, so team members get the plugin offered when they start Claude Code:
-
-```json
-{
-  "extraKnownMarketplaces": {
-    "brain": { "source": { "source": "github", "repo": "chrisb88/brain" } }
-  },
-  "enabledPlugins": { "brain@brain": true }
-}
-```
-
-Team members need `./install.sh` once and `brain qmd setup` once per clone (unless `BRAIN_SEARCH=off`). Until they have, the plugin prints a hint at session start (and the `qmd` MCP server cannot start).
+`brain init` never commits. Team members need `./install.sh` once and `brain qmd setup` once per clone (unless `BRAIN_SEARCH=off`). Until they have, the plugin prints a hint at session start (and the `qmd` MCP server cannot start).
 
 ## Usage
 
