@@ -36,6 +36,21 @@ export function sessionLines(config: BrainConfig, pluginRoot: string, level: Sea
     return lines;
 }
 
+/**
+ * Hook output: plain text when there is only context; otherwise JSON so that the warnings are also
+ * shown to the user (systemMessage) while Claude still gets all lines (additionalContext).
+ */
+export function sessionOutput(context: string[], warnings: string[]): string {
+    const lines = [...context, ...warnings];
+    if (warnings.length === 0) {
+        return lines.join('\n');
+    }
+    return JSON.stringify({
+        systemMessage: warnings.join('\n'),
+        hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: lines.join('\n') },
+    });
+}
+
 function quote(arg: string): string {
     return `'${arg.replaceAll("'", `'\\''`)}'`;
 }
