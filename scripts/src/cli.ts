@@ -5,11 +5,12 @@ import { parseArgs } from 'node:util';
 import { archiveNote } from './archive.ts';
 import { addCategory, listCategories } from './category.ts';
 import { checkBrain } from './check.ts';
+import { brainConfig } from './config.ts';
 import { runIndex } from './indexer.ts';
 import { initBrain, updateBrainConfig } from './init.ts';
 import { linkEntries } from './link.ts';
 import { appendLog, isLogOp } from './log.ts';
-import { brainRoot, callerDir } from './paths.ts';
+import { callerDir } from './paths.ts';
 import { isQmdInstalled, runQmd, setupQmd } from './qmd.ts';
 import { mergeCategory, moveEntry, renameCategory } from './recategorize.ts';
 import { remember } from './remember.ts';
@@ -92,7 +93,8 @@ function run(argv: string[], now: Date): number {
         console.log(HELP);
         return 0;
     }
-    const root = command === 'init' ? '' : brainRoot();
+    const config = command === 'init' ? null : brainConfig();
+    const root = config?.brainDir ?? '';
     switch (command) {
         case 'category': {
             const [action, ...args] = rest;
@@ -237,7 +239,7 @@ function run(argv: string[], now: Date): number {
         }
         case 'init': {
             if (rest.length === 1 && rest[0] === '--update') {
-                const updateRoot = brainRoot();
+                const updateRoot = brainConfig().brainDir;
                 const changed = updateBrainConfig(updateRoot);
                 console.log(changed.length === 0
                     ? 'Konfiguration ist aktuell.'

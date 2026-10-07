@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { installPushGuard } from '../src/guard.ts';
@@ -26,12 +26,31 @@ export function writeFile(root: string, rel: string, content: string): void {
     writeFileSync(join(root, rel), content);
 }
 
+export const BRAIN_YML = 'path: .\nmode: project\n';
+
+export function emptyDir(): string {
+    return mkdtempSync(join(tmpdir(), 'empty-'));
+}
+
 export function makeBrain(files: Record<string, string> = {}, parent = tmpdir()): string {
     const root = mkdtempSync(join(parent, 'brain-'));
+    writeFile(root, 'brain.yml', BRAIN_YML);
     for (const [rel, content] of Object.entries(files)) {
         writeFile(root, rel, content);
     }
     return root;
+}
+
+/** Project repository (not yet a git repo) with brain.yml at its root and the valid test brain in <path>. */
+export function projectWithBrain(path = 'knowledge'): { repo: string; brain: string } {
+    const repo = mkdtempSync(join(tmpdir(), 'project-'));
+    writeFile(repo, 'brain.yml', `path: ${JSON.stringify(path)}\nmode: project\n`);
+    writeFile(repo, 'README.md', '# Project\n');
+    const source = validBrain();
+    const brain = join(repo, path);
+    cpSync(source, brain, { recursive: true });
+    rmSync(join(brain, 'brain.yml'));
+    return { repo, brain };
 }
 
 export function read(root: string, rel: string): string {

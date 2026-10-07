@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { saveCategories } from './categories.ts';
+import { CONFIG_FILE, formatBrainConfig } from './config.ts';
 import { installPushGuard } from './guard.ts';
 import { runIndex } from './indexer.ts';
 
@@ -62,6 +63,7 @@ export function initBrain(target: string, templateDir = TEMPLATE_DIR): string {
     mkdirSync(root, { recursive: true });
     git(root, ['init', '-q']);
     updateBrainConfig(root, templateDir);
+    writeFileSync(join(root, CONFIG_FILE), formatBrainConfig('.', 'private'));
     for (const dir of ['inbox', 'archive', 'wiki']) {
         mkdirSync(join(root, dir), { recursive: true });
     }
