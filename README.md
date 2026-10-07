@@ -53,7 +53,7 @@ mkdir ~/knowledge && cd ~/knowledge
 brain init --private .
 ```
 
-`brain init` also enables the plugin for the project: it declares the `brain` marketplace and the plugin in `.claude/settings.json` (`extraKnownMarketplaces`, `enabledPlugins`), so team members get the plugin offered when they start Claude Code. If `brain init` printed a `claude plugin …` hint instead, run that command first – `.claude/settings.json` only exists afterwards.
+`brain init` also enables the plugin for the project: it declares the `brain` marketplace and the plugin in `.claude/settings.json` (`extraKnownMarketplaces`, `enabledPlugins`). Team members run `brain setup` once after cloning (see below). If `brain init` printed a `claude plugin …` hint instead, run that command first – `.claude/settings.json` only exists afterwards.
 
 `brain init` never commits.
 
