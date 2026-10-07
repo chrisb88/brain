@@ -17,7 +17,7 @@ import { findOrphanIndexes, isQmdInstalled, qmdIndexReady, removeIndex, runQmd, 
 import { mergeCategory, moveEntry, renameCategory } from './recategorize.ts';
 import { remember } from './remember.ts';
 import { searchLevel } from './search.ts';
-import { sessionLines, startBackgroundRefresh } from './session.ts';
+import { sessionLines, sessionOutput, startBackgroundRefresh } from './session.ts';
 import { cliVersion } from './version.ts';
 
 const HELP = `brain – command line tool for knowledge folders
@@ -391,10 +391,11 @@ function run(argv: string[], now: Date): number {
                 }
                 const level = searchLevel();
                 const qmdReady = level !== 'off' && qmdIndexReady(found.brainDir);
-                console.log(sessionLines(found, rest[0] ?? '', level, qmdReady).join('\n'));
+                const [context, ...warnings] = sessionLines(found, rest[0] ?? '', level, qmdReady);
+                console.log(sessionOutput([context], warnings));
                 startBackgroundRefresh(found, qmdReady);
             } catch (error) {
-                console.log(`Brain: Hinweis – ${(error as Error).message}`);
+                console.log(sessionOutput([], [`Brain: Hinweis – ${(error as Error).message}`]));
             }
             return 0;
         }

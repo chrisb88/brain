@@ -8,12 +8,14 @@ import { cliVersion } from '../src/version.ts';
 const repo = join(import.meta.dirname, '..', '..');
 const json = (rel: string): Record<string, unknown> => JSON.parse(readFileSync(join(repo, rel), 'utf8')) as Record<string, unknown>;
 const text = (rel: string): string => readFileSync(join(repo, rel), 'utf8');
-const HOOK_COMMAND = 'if command -v brain >/dev/null 2>&1; then brain session-start "${CLAUDE_PLUGIN_ROOT}"; else echo "Brain: CLI brain fehlt – einmal ./install.sh aus dem brain-Klon ausführen"; fi';
+const MISSING_CLI = 'Brain: CLI brain fehlt – einmal ./install.sh aus dem brain-Klon ausführen';
+const MISSING_CLI_JSON = JSON.stringify({ systemMessage: MISSING_CLI, hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: MISSING_CLI } });
+const HOOK_COMMAND = `if command -v brain >/dev/null 2>&1; then brain session-start "\${CLAUDE_PLUGIN_ROOT}"; else echo '${MISSING_CLI_JSON}'; fi`;
 
-test('hook prints a hint instead of failing when the brain CLI is missing', () => {
+test('hook shows the user a hint instead of failing when the brain CLI is missing', () => {
     const result = spawnSync('/bin/sh', ['-c', HOOK_COMMAND], { env: { PATH: '/nonexistent', CLAUDE_PLUGIN_ROOT: '/x' }, encoding: 'utf8' });
     assert.equal(result.status, 0);
-    assert.equal(result.stdout, 'Brain: CLI brain fehlt – einmal ./install.sh aus dem brain-Klon ausführen\n');
+    assert.equal(result.stdout, `${MISSING_CLI_JSON}\n`);
 });
 
 test('marketplace lists the brain plugin from ./plugin', () => {
