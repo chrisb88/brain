@@ -11,6 +11,7 @@ import { initBrain, updateBrainConfig } from './init.ts';
 import { linkEntries } from './link.ts';
 import { appendLog, isLogOp } from './log.ts';
 import { callerDir } from './paths.ts';
+import { activatePlugin, PLUGIN_INSTALL_COMMAND } from './plugin.ts';
 import { promptLine } from './prompt.ts';
 import { findOrphanIndexes, isQmdInstalled, removeIndex, runQmd, setupQmd } from './qmd.ts';
 import { mergeCategory, moveEntry, renameCategory } from './recategorize.ts';
@@ -57,15 +58,16 @@ Commands:
       conflict, resolve, recategorize, category, ingest.
   help
       Show this help (also: --help, -h, no arguments).
-  init <path>
-      Create a new brain data repository: git without remote, push guard, config
-      from the code repository's template/, empty categories, qmd index.
+  init [--private] [<path>]
+      Create a knowledge folder in the current git repository (brain.yml, template
+      files, empty categories, qmd index) and enable the brain plugin. --private
+      creates a standalone repository without remote and with push guard.
   init --update
       Refresh the config files of the current brain from template/ and reinstall
       the push guard. Never touches data.
 
 Examples:
-  brain init /mnt/f/second-brain-data
+  brain init knowledge
   brain archive inbox/ingress-notes.md --category tech
   brain remember --category tech --title "Kubernetes Ingress" --summary "TLS setup for the ingress controller." \\
       --source archive/tech/2026/10/2026-10-03-1530-ingress-notes --related wiki/tech/azure-aks <<'EOF'
@@ -113,6 +115,24 @@ function pruneIndexes(args: string[]): number {
     }
     console.log(`${orphans.length} Index(e) gelöscht.`);
     return 0;
+}
+
+function initQmd(brainDir: string): void {
+    const level = searchLevel();
+    if (level === 'off') {
+        console.log('BRAIN_SEARCH=off – qmd wird nicht eingerichtet.');
+        return;
+    }
+    if (!isQmdInstalled()) {
+        console.log('Hinweis: qmd nicht gefunden – später im Wissens-Ordner „brain qmd setup“ ausführen.');
+        return;
+    }
+    try {
+        setupQmd(brainDir, level);
+        console.log(`qmd-Index eingerichtet (${level}).`);
+    } catch (error) {
+        console.log(`Hinweis: qmd-Einrichtung fehlgeschlagen (${(error as Error).message}) – später im Wissens-Ordner „brain qmd setup“ ausführen.`);
+    }
 }
 
 function run(argv: string[], now: Date): number {
@@ -279,30 +299,40 @@ function run(argv: string[], now: Date): number {
             return runQmd(root, rest);
         }
         case 'init': {
-            if (rest.length === 1 && rest[0] === '--update') {
-                const updateRoot = brainConfig().brainDir;
-                const changed = updateBrainConfig(updateRoot);
+            const { values, positionals } = parseArgs({
+                args: rest,
+                allowPositionals: true,
+                options: { update: { type: 'boolean', default: false }, private: { type: 'boolean', default: false } },
+            });
+            if (values.update === true) {
+                if (positionals.length > 0 || values.private === true) {
+                    throw new Error('Verwendung: brain init --update');
+                }
+                const current = brainConfig();
+                const changed = updateBrainConfig(current.brainDir, current.mode);
                 console.log(changed.length === 0
                     ? 'Konfiguration ist aktuell.'
                     : ['Aktualisiert (bitte prüfen und committen):', ...changed.map((rel) => `  - ${rel}`)].join('\n'));
                 return 0;
             }
-            if (rest.length !== 1 || rest[0].startsWith('-')) {
-                throw new Error('Verwendung: brain init <pfad> | brain init --update');
+            if (positionals.length > 1) {
+                throw new Error('Verwendung: brain init [--private] [<pfad>] | brain init --update');
             }
-            const created = initBrain(callerPath(rest[0]));
-            console.log(`Brain angelegt: ${created} (Git-Repo ohne Remote, Push-Schutz aktiv)`);
-            if (isQmdInstalled()) {
-                try {
-                    setupQmd(created, 'hybrid');
-                    console.log('qmd-Index eingerichtet.');
-                } catch (error) {
-                    console.log(`Hinweis: qmd-Einrichtung fehlgeschlagen (${(error as Error).message}) – später im Brain „brain qmd setup“ ausführen.`);
-                }
-            } else {
-                console.log('Hinweis: qmd nicht gefunden – später im Brain „brain qmd setup“ ausführen.');
+            const result = initBrain({
+                cwd: callerDir(),
+                path: positionals[0],
+                private: values.private === true,
+                askPath: process.stdin.isTTY === true ? () => promptLine('Wissens-Ordner [knowledge]: ') || 'knowledge' : undefined,
+            });
+            console.log(`Wissens-Ordner angelegt: ${result.brainDir} (mode: ${result.mode})`);
+            if (result.createdRepo) {
+                console.log(`Git-Repository angelegt: ${result.configRoot}`);
             }
-            console.log(`Nächster Schritt: Claude Code in ${created} starten und den MCP-Server „qmd“ freigeben.`);
+            initQmd(result.brainDir);
+            console.log(activatePlugin(result.configRoot)
+                ? 'Plugin brain@brain für dieses Projekt aktiviert.'
+                : `Hinweis: Plugin nicht aktiviert – im Repo ausführen: ${PLUGIN_INSTALL_COMMAND}`);
+            console.log('Nächster Schritt: Änderungen prüfen und committen, dann Claude Code im Repo starten.');
             return 0;
         }
         default:

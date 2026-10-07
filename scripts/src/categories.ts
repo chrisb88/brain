@@ -14,7 +14,7 @@ export const CATEGORY_SLUG_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 
 const FILE = 'categories.yml';
 const HEADER = [
-    '# Erlaubte Kategorien des Second Brain – nicht von Hand bearbeiten.',
+    '# Erlaubte Kategorien dieses Wissens-Ordners – nicht von Hand bearbeiten.',
     '# Neue Kategorie: brain category add <slug> --name "<Name>" [--description "<Text>"]',
     '# Umbenennen/Zusammenlegen: brain recategorize --rename|--merge … (siehe brain help)',
     '',

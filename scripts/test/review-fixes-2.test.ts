@@ -97,7 +97,7 @@ test('saveCategories writes a fixed "do not edit by hand" header that survives r
     saveCategories(root, []);
     saveCategories(root, [{ slug: 'urlaub', name: 'Urlaub', description: 'Reisen.' }]);
     const text = read(root, 'categories.yml');
-    assert.ok(text.startsWith('# Erlaubte Kategorien des Second Brain – nicht von Hand bearbeiten.\n'));
+    assert.ok(text.startsWith('# Erlaubte Kategorien dieses Wissens-Ordners – nicht von Hand bearbeiten.\n'));
     assert.match(text, /brain category add/);
     assert.equal(text.match(/nicht von Hand bearbeiten/g)?.length, 1);
     assert.deepEqual(loadCategories(root), [{ slug: 'urlaub', name: 'Urlaub', description: 'Reisen.' }]);
