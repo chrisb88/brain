@@ -1,7 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { isKnownCategory, UNCATEGORIZED } from './categories.ts';
-import { archiveIntegrityErrors, isGitRepo } from './git.ts';
+import type { BrainMode } from './config.ts';
+import { archiveIntegrityErrors, isGitRepo, uncommittedChanges } from './git.ts';
 import { pushGuardErrors } from './guard.ts';
 import { qmdConfigPath, qmdIndexName } from './qmd.ts';
 import { extractLinks, getRelated, headings, parseOpenPoints, splitFrontmatter } from './markdown.ts';
@@ -158,7 +159,7 @@ function checkOpenPoints(brain: Brain, errors: string[], hints: string[]): void 
     }
 }
 
-export function checkBrain(root: string): CheckReport {
+export function checkBrain(root: string, mode: BrainMode = 'project'): CheckReport {
     const errors: string[] = [];
     const hints: string[] = [];
     let brain: Brain;
@@ -176,7 +177,13 @@ export function checkBrain(root: string): CheckReport {
     checkOpenPoints(brain, errors, hints);
     if (isGitRepo(root)) {
         errors.push(...archiveIntegrityErrors(root));
-        errors.push(...pushGuardErrors(root));
+        if (mode === 'private') {
+            errors.push(...pushGuardErrors(root));
+        }
+        const changed = uncommittedChanges(root);
+        if (changed.length > 0) {
+            hints.push(`Nicht committete Änderungen im Wissens-Ordner (${changed.length} Datei(en)) – prüfen und committen`);
+        }
     } else {
         hints.push('Kein Git-Repository – Archiv-Integrität wurde nicht geprüft.');
     }

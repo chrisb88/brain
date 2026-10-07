@@ -14,7 +14,7 @@ test('a guarded repository has no guard errors', () => {
     const root = validBrain();
     initGit(root);
     assert.deepEqual(pushGuardErrors(root), []);
-    assert.deepEqual(checkBrain(root).errors, []);
+    assert.deepEqual(checkBrain(root, 'private').errors, []);
 });
 
 test('push is rejected by the hook', () => {
@@ -38,7 +38,7 @@ for (const [label, mutate, error] of broken) {
         const root = validBrain();
         initGit(root);
         mutate(root);
-        assert.match(checkBrain(root).errors.join('\n'), error);
+        assert.match(checkBrain(root, 'private').errors.join('\n'), error);
     });
 }
 

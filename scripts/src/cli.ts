@@ -187,7 +187,7 @@ function run(argv: string[], now: Date): number {
             return 0;
         }
         case 'check': {
-            const report = checkBrain(root);
+            const report = checkBrain(root, config?.mode);
             if (report.errors.length > 0) {
                 console.log(['Fehler:', ...report.errors.map((error) => `  - ${error}`)].join('\n'));
             }

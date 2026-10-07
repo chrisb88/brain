@@ -2,12 +2,12 @@ import { execFileSync } from 'node:child_process';
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-export const PUSH_GUARD_MARKER = '# second-brain: this repository must never be pushed.';
+export const PUSH_GUARD_MARKER = '# brain: this repository must never be pushed.';
 
 const HOOK = [
     '#!/bin/sh',
     PUSH_GUARD_MARKER,
-    'echo "Second Brain: Dieses Daten-Repository darf nicht gepusht werden." >&2',
+    'echo "Brain: Dieses Repository ist privat (mode: private) und darf nicht gepusht werden." >&2',
     'exit 1',
     '',
 ].join('\n');
