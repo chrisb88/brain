@@ -41,7 +41,7 @@ test('initBrain creates a project brain in a subfolder without touching the proj
     const repo = project();
     const result = initBrain({ cwd: repo, path: 'knowledge', private: false });
     assert.deepEqual(result, { configRoot: repo, brainDir: join(repo, 'knowledge'), mode: 'project', createdRepo: false });
-    assert.deepEqual(loadBrainConfig(repo), { configRoot: repo, brainDir: join(repo, 'knowledge'), path: 'knowledge', mode: 'project' });
+    assert.deepEqual(loadBrainConfig(repo), { configRoot: repo, brainDir: join(repo, 'knowledge'), path: 'knowledge', mode: 'project', pushGuard: false });
     for (const rel of ['.gitignore', '.gitattributes', 'CLAUDE.md', 'categories.yml', 'inbox/.gitkeep', 'INDEX.md', 'graph.json']) {
         assert.ok(existsSync(join(repo, 'knowledge', rel)), rel);
     }
