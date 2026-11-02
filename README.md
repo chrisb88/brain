@@ -2,13 +2,26 @@
 
 brain keeps your knowledge (a "second brain") in plain Markdown files, maintained by [Claude Code](https://claude.com/claude-code) and searchable with [qmd](https://github.com/tobi/qmd).
 
-Use it **per project** – the knowledge lives in a folder of the project repository and is shared with everyone who works on it – or **privately** in its own repository that is protected against pushing. Both have the same layout.
+Use it **per project** or **privately** – see [Two modes](#two-modes-project-or-private).
 
 You drop raw notes into an inbox; `/brain:ingest` archives the originals unchanged and works the knowledge into condensed, categorized, cross-linked wiki entries. `/brain:ask` answers questions strictly from the brain, with source links. While you code, Claude consults the brain on its own when a question touches project knowledge.
 
 Based on the approach by [The Node AI](https://www.youtube.com/watch?v=mHSOsy_usAg) – see [Credits](#credits).
 
 > **Note:** Instructions, slash commands and wiki entries are written in German. Code, CLI and file formats are English.
+
+## Two modes: project or private
+
+| | **Project** (`brain init <folder>`) | **Private** (`brain init --private <dir>`) |
+|---|---|---|
+| Where the knowledge lives | a folder inside the project repository | its own Git repository |
+| Who sees it | everyone with access to the project repository – knowledge is committed and pushed with the code | only you – the repository has no remote and is protected against pushing |
+| Good for | architecture decisions, domain knowledge, how-tos, onboarding | personal notes, learning, anything you would not share with the team |
+| Backup | the project's remote | your responsibility |
+
+> **Project mode shares everything you ingest.** Once committed, wiki entries and archived originals are visible to all collaborators. Don't ingest personal or confidential notes into a project brain – use a private brain for those.
+
+Both modes use the same layout and commands.
 
 ## Features
 
@@ -40,7 +53,7 @@ Projects set up with `brain init` update the plugin automatically (`autoUpdate` 
 
 ## Create a knowledge folder
 
-In a project repository:
+In a project repository (shared with the team, see [Two modes](#two-modes-project-or-private)):
 
 ```bash
 cd my-project
@@ -48,7 +61,7 @@ brain init knowledge          # brain.yml + knowledge/, plugin enabled for this 
 git add brain.yml knowledge .claude/settings.json && git commit -m "Add project knowledge"
 ```
 
-Private knowledge (own repository, never pushed):
+Private knowledge (own repository, only for you, never pushed):
 
 ```bash
 mkdir ~/knowledge && cd ~/knowledge
