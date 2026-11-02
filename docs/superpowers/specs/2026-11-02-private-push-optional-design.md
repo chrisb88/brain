@@ -2,7 +2,7 @@
 
 Datum: 2026-11-02
 Status: Entwurf zur Review
-Bezug: ändert `2026-10-06-plugin-unified-brain-design.md` (Abschnitte zu `brain init --private`, `brain init --update`, `brain check`, Kontextzeile) und damit Abschnitt 5 von `2026-10-03-data-repo-separation-design.md`. Wo diese Spec abweicht, gilt diese Spec.
+Bezug: ändert `2026-10-06-plugin-unified-brain-design.md` (Abschnitte zu `brain init --private`, `brain init --update` – dort „`brain.yml` wird nie angefasst“ –, `brain check`, Kontextzeile) und damit Abschnitt 5 von `2026-10-03-data-repo-separation-design.md`. Wo diese Spec abweicht, gilt diese Spec.
 
 ## 1. Ziel
 
@@ -38,8 +38,7 @@ mode: private
 push_guard: false
 ```
 
-- Die zweite Kommentarzeile schreibt `brain init` in jede neue `brain.yml` (beide Modi). `brain init --update` fasst `brain.yml` weiterhin nicht an; bestehende Dateien bekommen die Zeile also nicht nachträglich.
-
+- Die Kommentarzeilen gehören zum festen Format: `brain init` schreibt sie in jede `brain.yml` (beide Modi), `brain init --update` stellt sie wieder her (Abschnitt 4).
 - Fehlt der Schlüssel bei `mode: private`, gilt `push_guard: true` (bestehende Wissens-Ordner bleiben geschützt).
 - `push_guard` bei `mode: project` → Fehler beim Laden: „push_guard nur bei mode: private“.
 - Anderer Wert als `true`/`false` → Fehler: „push_guard muss true oder false sein“.
@@ -67,7 +66,14 @@ Die Frage kommt nach der Pfad-Frage (`Wissens-Ordner [knowledge]:`), damit alle 
 
 ## 4. `brain init --update`
 
-Richtet den Push-Schutz nach `brain.yml` aus:
+**`brain.yml` neu schreiben:** `brain init --update` liest `brain.yml` (mit den Prüfungen aus Abschnitt 2) und schreibt sie im aktuellen Format neu – dieselbe Funktion wie `brain init` (`formatBrainConfig`). Damit kommen künftige Formatänderungen (Kommentare, neue Schlüssel mit Voreinstellung) bei jedem `--update` in bestehende Dateien:
+
+- Werte bleiben erhalten; fehlende Schlüssel werden mit ihrer Voreinstellung ausdrücklich geschrieben (heute: `push_guard: true` bei `mode: private` ohne den Schlüssel).
+- Eigene Kommentare und Formatierung in `brain.yml` gehen dabei verloren (die Datei ist generiert; der Kopfkommentar sagt das).
+- Ist `brain.yml` ungültig, bricht `--update` mit der Fehlermeldung ab, bevor etwas geschrieben wird.
+- Ändert sich der Inhalt, erscheint `brain.yml` in der Liste „Aktualisiert (bitte prüfen und committen)“; sonst nicht.
+
+Danach richtet `--update` den Push-Schutz nach `brain.yml` aus:
 
 - `push_guard: true` → Push-Schutz installieren (wie bisher).
 - `push_guard: false` → einen vorhandenen `pre-push`-Hook mit der Markierungszeile `# brain: this repository must never be pushed.` löschen. Ein fremder `pre-push`-Hook (ohne Markierungszeile) bleibt unangetastet. `core.hooksPath` bleibt, wie es ist (zeigt auf das Standard-Hook-Verzeichnis, schadet nicht).
@@ -95,7 +101,7 @@ Umstellen eines bestehenden Wissens-Ordners: `push_guard` in `brain.yml` ändern
 
 - **`config`:** neue `brain.yml` enthält die Kommentarzeile zu `brain init --update`; `push_guard` fehlt bei `private` → `true`; `false` wird gelesen; bei `project` → Fehler; ungültiger Wert → Fehler.
 - **`init`:** `--private` ohne Terminal → `push_guard: true`, Hook installiert; `--private --allow-push` → `push_guard: false`, kein Hook, Remote erlaubt; Remote mit `push_guard: true` → Fehler ohne Schreibzugriff; Frage per injizierter Antwortfunktion (wie `askPath`): Ja/Leer/Nein/ungültig-dann-Nein; `--allow-push` ohne `--private` → Fehler.
-- **`init --update`:** `true` → Hook installiert; `false` → brain-Hook entfernt; fremder Hook bleibt.
+- **`init --update`:** alte `brain.yml` (ohne Kommentarzeile, `private` ohne `push_guard`) wird mit Kommentar und `push_guard: true` neu geschrieben und als geändert gemeldet; aktuelle `brain.yml` → nicht gemeldet; ungültige `brain.yml` → Fehler, nichts geschrieben; `true` → Hook installiert; `false` → brain-Hook entfernt; fremder Hook bleibt.
 - **`check`:** keine Push-Fehler bei `push_guard: false` mit Remote; Hinweis bei `false` und installiertem Hook; Fehler wie bisher bei `true`.
 - **`session`:** Kontextzeile mit `push guard: on|off` bei `private`, unverändert bei `project`.
 - **End-to-end:** `push_guard: false`, lokales Bare-Repo als Remote, `git push` gelingt.
