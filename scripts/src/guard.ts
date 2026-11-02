@@ -7,7 +7,8 @@ export const PUSH_GUARD_MARKER = '# brain: this repository must never be pushed.
 const HOOK = [
     '#!/bin/sh',
     PUSH_GUARD_MARKER,
-    'echo "Brain: Dieses Repository ist privat (mode: private) und darf nicht gepusht werden." >&2',
+    'echo "Brain: Dieses Repository ist privat (mode: private, push_guard: true) und darf nicht gepusht werden." >&2',
+    'echo "Brain: Pushen erlauben: in brain.yml „push_guard: false“ setzen, dann „brain init --update“ ausführen." >&2',
     'exit 1',
     '',
 ].join('\n');

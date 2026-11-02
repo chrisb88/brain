@@ -1,4 +1,5 @@
 import { readSync } from 'node:fs';
+import type { BrainMode } from './config.ts';
 
 /** Reads one line from stdin synchronously (only call when stdin is a terminal). */
 export function promptLine(question: string): string {
@@ -34,6 +35,18 @@ export function parseYesNo(answer: string, fallback: boolean): boolean | null {
     }
     if (['n', 'no', 'nein'].includes(value)) {
         return false;
+    }
+    return null;
+}
+
+/** Parses the mode answer: project/projekt → project, private/privat → private, anything else → null. */
+export function parseMode(answer: string): BrainMode | null {
+    const value = answer.trim().toLowerCase();
+    if (value === 'project' || value === 'projekt') {
+        return 'project';
+    }
+    if (value === 'private' || value === 'privat') {
+        return 'private';
     }
     return null;
 }

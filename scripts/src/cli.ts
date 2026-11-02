@@ -5,7 +5,7 @@ import { parseArgs } from 'node:util';
 import { archiveNote } from './archive.ts';
 import { addCategory, listCategories } from './category.ts';
 import { checkBrain } from './check.ts';
-import { brainConfig, brainStarts, findBrainConfig, rewriteBrainConfig } from './config.ts';
+import { type BrainMode, brainConfig, brainStarts, findBrainConfig, rewriteBrainConfig } from './config.ts';
 import { hasPushGuard } from './guard.ts';
 import { runIndex } from './indexer.ts';
 import { initBrain, updateBrainConfig } from './init.ts';
@@ -13,7 +13,7 @@ import { linkEntries } from './link.ts';
 import { appendLog, isLogOp } from './log.ts';
 import { callerDir } from './paths.ts';
 import { activatePlugin, enableAutoUpdate, PLUGIN_INSTALL_COMMAND } from './plugin.ts';
-import { parseYesNo, promptLine } from './prompt.ts';
+import { parseMode, parseYesNo, promptLine } from './prompt.ts';
 import { findOrphanIndexes, isQmdInstalled, qmdIndexReady, removeIndex, runQmd, setupQmd } from './qmd.ts';
 import { mergeCategory, moveEntry, renameCategory } from './recategorize.ts';
 import { remember } from './remember.ts';
@@ -26,11 +26,11 @@ const HELP = `brain – command line tool for knowledge folders
 Usage: brain <command> [options]
 
 Knowledge lives in a git repository: brain.yml at the repository root names the knowledge folder
-(path) and the mode (project: shared with the repository; private: own repository, by default never
-pushed). brain finds
-brain.yml by walking up from the current directory (or set BRAIN_ROOT to the folder containing
-brain.yml). Entries are addressed as wiki/<category>/<entry>, sources as
-archive/<category>/YYYY/MM/<file> (".md" is optional), relative to the knowledge folder.
+(path) and the mode (project: a folder in the project repository, shared with everyone who has
+access to it; private: own repository, by default local only). brain finds brain.yml by walking up
+from the current directory (or set BRAIN_ROOT to the folder containing brain.yml). Entries are
+addressed as wiki/<category>/<entry>, sources as archive/<category>/YYYY/MM/<file> (".md" is
+optional), relative to the knowledge folder.
 
 Environment:
   BRAIN_SEARCH=hybrid|keyword|off
@@ -38,12 +38,14 @@ Environment:
       (qmd BM25 only, no models) or off (INDEX.md and grep, no qmd).
 
 Commands:
-  init [--private [--allow-push]] [<path>]
-      Create a knowledge folder in the current git repository: brain.yml at the repository root and the
-      knowledge folder at <path>, relative to the repository root (asked for when missing, default
-      "knowledge"). --private creates the repository if needed and asks whether it stays local only
-      (push guard, requires a repository without remote; default without a terminal); --allow-push
-      skips the question and allows a remote. Enables the brain plugin for the project
+  init [--project | --private [--allow-push]] [<path>]
+      Create a knowledge folder: brain.yml at the repository root and the knowledge folder at <path>,
+      relative to the repository root (asked for when missing, default "knowledge"). Without
+      --project or --private brain init asks for the mode (without a terminal: project).
+      --project: the current git repository, knowledge is committed and shared with the project.
+      --private: own repository, created if needed; asks whether it stays local only (push guard:
+      no remote allowed, every push rejected; without a terminal: yes). --allow-push skips that
+      question and allows a remote, e.g. for backups. Enables the brain plugin for the project
       (.claude/settings.json). Never commits.
   setup
       Set up a cloned repository on this machine: enable the brain plugin for the project (Claude
@@ -113,6 +115,19 @@ function callerPath(path: string): string {
 
 function readStdin(): string {
     return process.stdin.isTTY ? '' : readFileSync(0, 'utf8');
+}
+
+/** Asks until the answer is project or private; no default. */
+function askMode(): BrainMode {
+    for (;;) {
+        const answer = parseMode(promptLine(
+            'Modus – project (Ordner im Projekt-Repository, mit allen geteilt, die Zugriff auf das Repository haben) '
+            + 'oder private (eigenes Repository, nur für dich)? [project/private] ',
+        ));
+        if (answer !== null) {
+            return answer;
+        }
+    }
 }
 
 /** Asks until the answer is yes or no; default yes (push guard on). */
@@ -361,11 +376,12 @@ function run(argv: string[], now: Date): number {
                 options: {
                     update: { type: 'boolean', default: false },
                     private: { type: 'boolean', default: false },
+                    project: { type: 'boolean', default: false },
                     'allow-push': { type: 'boolean', default: false },
                 },
             });
             if (values.update === true) {
-                if (positionals.length > 0 || values.private === true || values['allow-push'] === true) {
+                if (positionals.length > 0 || values.private === true || values.project === true || values['allow-push'] === true) {
                     throw new Error('Verwendung: brain init --update');
                 }
                 const current = brainConfig();
@@ -383,12 +399,16 @@ function run(argv: string[], now: Date): number {
                 return 0;
             }
             if (positionals.length > 1) {
-                throw new Error('Verwendung: brain init [--private [--allow-push]] [<pfad>] | brain init --update');
+                throw new Error('Verwendung: brain init [--project | --private [--allow-push]] [<pfad>] | brain init --update');
+            }
+            if (values.private === true && values.project === true) {
+                throw new Error('--private und --project schließen sich aus');
             }
             const result = initBrain({
                 cwd: callerDir(),
                 path: positionals[0],
-                private: values.private === true,
+                private: values.private === true ? true : values.project === true ? false : undefined,
+                askMode: process.stdin.isTTY === true ? askMode : undefined,
                 allowPush: values['allow-push'] === true,
                 askPath: process.stdin.isTTY === true ? () => promptLine('Wissens-Ordner [knowledge]: ') || 'knowledge' : undefined,
                 askPushGuard: process.stdin.isTTY === true ? askPushGuard : undefined,

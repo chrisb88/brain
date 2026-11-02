@@ -19,7 +19,9 @@ export interface InitOptions {
     cwd: string;
     /** Knowledge folder relative to the repository root; asked for when missing. */
     path?: string;
-    private: boolean;
+    /** true: private, false: project, undefined: ask (askMode) or project. */
+    private?: boolean;
+    askMode?: () => BrainMode;
     /** Private mode without push guard: no question, a remote is allowed. */
     allowPush?: boolean;
     askPath?: () => string;
@@ -82,23 +84,26 @@ export function updateBrainConfig(brainDir: string, pushGuard: boolean, template
 /** Creates brain.yml at the repository root and a new knowledge folder; never commits. */
 export function initBrain(options: InitOptions): InitResult {
     const cwd = resolve(options.cwd);
-    const mode: BrainMode = options.private ? 'private' : 'project';
     const top = gitOutput(cwd, ['rev-parse', '--show-toplevel']);
-    if (top === null && !options.private) {
-        throw new Error('brain init muss in einem Git-Repository laufen – für einen privaten Wissens-Ordner: brain init --private');
-    }
     const configRoot = top ?? cwd;
     if (existsSync(join(configRoot, CONFIG_FILE))) {
         throw new Error(`Hier gibt es bereits einen Wissens-Ordner: ${join(configRoot, CONFIG_FILE)}`);
     }
-    if (options.allowPush === true && !options.private) {
+    const mode: BrainMode = options.private === undefined
+        ? options.askMode?.() ?? 'project'
+        : options.private ? 'private' : 'project';
+    const isPrivate = mode === 'private';
+    if (top === null && !isPrivate) {
+        throw new Error('brain init muss in einem Git-Repository laufen – für einen privaten Wissens-Ordner: brain init --private');
+    }
+    if (options.allowPush === true && !isPrivate) {
         throw new Error('--allow-push nur mit --private');
     }
     const requested = options.path ?? options.askPath?.();
     if (requested === undefined || requested.trim() === '') {
         throw new Error('Pfad angeben: brain init [--private] <pfad>');
     }
-    const pushGuard = options.private && options.allowPush !== true && (options.askPushGuard?.() ?? true);
+    const pushGuard = isPrivate && options.allowPush !== true && (options.askPushGuard?.() ?? true);
     if (pushGuard && top !== null && (gitOutput(top, ['remote']) ?? '') !== '') {
         throw new Error('Privater Wissens-Ordner nur in einem Repository ohne Remote – Remote entfernen, ohne --private anlegen oder --allow-push verwenden');
     }

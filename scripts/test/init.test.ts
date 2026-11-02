@@ -106,6 +106,32 @@ test('initBrain asks for the push guard after the path', () => {
     assert.equal(result.pushGuard, false);
 });
 
+test('initBrain asks for the mode first, then path and push guard', () => {
+    const asked: string[] = [];
+    const result = initBrain({
+        cwd: emptyDir(),
+        askMode: () => { asked.push('mode'); return 'private'; },
+        askPath: () => { asked.push('path'); return '.'; },
+        askPushGuard: () => { asked.push('guard'); return true; },
+    });
+    assert.deepEqual(asked, ['mode', 'path', 'guard']);
+    assert.equal(result.mode, 'private');
+    assert.equal(result.pushGuard, true);
+});
+
+test('initBrain without mode and without question creates a project brain', () => {
+    const repo = project();
+    assert.equal(initBrain({ cwd: repo, path: 'knowledge' }).mode, 'project');
+});
+
+test('initBrain asks for the mode only after checking for an existing brain.yml', () => {
+    const repo = project();
+    writeFile(repo, 'brain.yml', 'path: .\nmode: project\n');
+    let asked = false;
+    assert.throws(() => initBrain({ cwd: repo, path: 'knowledge', askMode: () => { asked = true; return 'project'; } }), /Hier gibt es bereits einen Wissens-Ordner/);
+    assert.equal(asked, false);
+});
+
 const refusals: Array<[string, () => InitOptions, RegExp]> = [
     ['outside a git repository', () => ({ cwd: emptyDir(), path: 'knowledge', private: false }), /muss in einem Git-Repository laufen – für einen privaten Wissens-Ordner: brain init --private/],
     ['an existing brain.yml', () => {
@@ -287,3 +313,25 @@ test('cli init --update --allow-push is refused', () => {
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /Verwendung: brain init --update/);
 });
+
+test('cli init --project creates a project brain', () => {
+    const repo = project();
+    const result = runCli(repo, ['init', '--project', 'knowledge'], '', repo, CLI_ENV);
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /\(mode: project\)/);
+});
+
+const cliRefusals: Array<[string, string[], RegExp]> = [
+    ['--private and --project', ['init', '--private', '--project', '.'], /--private und --project schließen sich aus/],
+    ['--project with --allow-push', ['init', '--project', '--allow-push', 'knowledge'], /--allow-push nur mit --private/],
+    ['--update with --project', ['init', '--update', '--project'], /Verwendung: brain init --update/],
+];
+for (const [label, args, error] of cliRefusals) {
+    test(`cli init refuses ${label}`, () => {
+        const repo = project();
+        const result = runCli(repo, args, '', repo, CLI_ENV);
+        assert.notEqual(result.status, 0);
+        assert.match(result.stderr, error);
+        assert.equal(existsSync(join(repo, 'brain.yml')), false);
+    });
+}

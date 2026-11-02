@@ -25,6 +25,7 @@ test('push is rejected by the hook', () => {
     const result = spawnSync('git', ['-C', root, 'push', bare, 'HEAD:refs/heads/main'], { encoding: 'utf8' });
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /darf nicht gepusht werden/);
+    assert.match(result.stderr, /Pushen erlauben: in brain\.yml „push_guard: false“ setzen, dann „brain init --update“ ausführen\./);
 });
 
 const broken: Array<[string, (root: string) => void, RegExp]> = [
