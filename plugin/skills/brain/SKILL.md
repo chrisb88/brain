@@ -9,7 +9,7 @@ brain legt Wissen als Markdown-Dateien in einem Wissens-Ordner dieses Repositori
 
 ## Wo der Wissens-Ordner liegt
 
-- Beim Sitzungsstart steht im Kontext eine Zeile wie `Brain: knowledge/ (mode: project, search: hybrid)`: Wissens-Ordner (relativ zum Repo-Root), Modus und Suchstufe. Fehlt sie: `brain check` ausführen; meldet es „Kein Wissens-Ordner gefunden“, gibt es hier keinen.
+- Beim Sitzungsstart steht im Kontext eine Zeile wie `Brain: knowledge/ (mode: project, search: hybrid)` oder `Brain: ./ (mode: private, push guard: on, search: hybrid)`: Wissens-Ordner (relativ zum Repo-Root), Modus, bei `private` der Push-Schutz, und Suchstufe. Fehlt sie: `brain check` ausführen; meldet es „Kein Wissens-Ordner gefunden“, gibt es hier keinen.
 - Alle Pfade in diesem Skill sind relativ zum Wissens-Ordner. Shell-Befehle immer im Wissens-Ordner ausführen: `cd <Wissens-Ordner> && …`.
 - Steht in der Kontextzeile eine Warnung (Versionen passen nicht, ungültige Suchstufe), den Nutzer einmal darauf hinweisen.
 - Steht im Kontext eine Hinweis-Zeile wie `Brain: Hinweis – qmd-Index fehlt – …`, den Nutzer einmal darauf hinweisen (hier: einmal `brain setup` im Repository ausführen).
@@ -30,7 +30,7 @@ brain legt Wissen als Markdown-Dateien in einem Wissens-Ordner dieses Repositori
 - Nie direkt in `LOG.md` schreiben – `brain log` nutzen; die übrigen `brain`-Befehle protokollieren selbst.
 - In `archive/` nie etwas ändern oder löschen. Verschieben nur per `brain recategorize`.
 - Nie eine Kategorie ohne ausdrückliche Freigabe des Nutzers anlegen; angelegt wird nur mit `brain category add`, nie durch direktes Bearbeiten von `categories.yml`. Passt keine und wird keine freigegeben: `_uncategorized`.
-- Nie committen und nie pushen – das macht der Nutzer. Bei `mode: private` zusätzlich nie ein Git-Remote anlegen (Push-Schutz per Hook; `brain check` meldet Verstöße).
+- Nie committen und nie pushen – das macht der Nutzer. Bei `push guard: on` zusätzlich nie ein Git-Remote anlegen (Push-Schutz per Hook; `brain check` meldet Verstöße).
 - Sprache: Was eine Maschine auswertet, ist Englisch (Code, CLI, Datei- und Ordnernamen, Frontmatter-Felder, die Marker `## Related`, `## Sources`, `Conflict C-…`, `Unclear Q-…`, `Affects:`). Was der Nutzer liest (Titel, Summary, Fließtext, Callout-Text, Antworten), ist Deutsch.
 
 ## Suche je Suchstufe

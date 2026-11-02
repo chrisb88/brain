@@ -6,6 +6,7 @@ import { test } from 'node:test';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { stringify } from 'yaml';
 import { qmdIndexName } from '../src/qmd.ts';
+import { sessionLines } from '../src/session.ts';
 import { cliVersion } from '../src/version.ts';
 import { emptyDir, projectWithBrain, runCli, writeFile } from './helpers.ts';
 
@@ -51,6 +52,14 @@ test('session-start prints the context line', () => {
     const result = sessionStart(repo, pluginDir(cliVersion()));
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.stdout, 'Brain: knowledge/ (mode: project, search: off)\n');
+});
+
+test('sessionLines shows the push guard in private mode', () => {
+    const dir = emptyDir();
+    const plugin = pluginDir(cliVersion());
+    const config = { configRoot: dir, brainDir: dir, path: '.', mode: 'private' as const, pushGuard: true };
+    assert.equal(sessionLines(config, plugin, 'off', true)[0], 'Brain: ./ (mode: private, push guard: on, search: off)');
+    assert.equal(sessionLines({ ...config, pushGuard: false }, plugin, 'off', true)[0], 'Brain: ./ (mode: private, push guard: off, search: off)');
 });
 
 const warnings: Array<[string, string | null, Record<string, string>, RegExp]> = [
