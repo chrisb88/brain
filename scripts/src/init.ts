@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { saveCategories } from './categories.ts';
 import { CONFIG_FILE, type BrainMode, formatBrainConfig } from './config.ts';
@@ -7,7 +7,10 @@ import { installPushGuard, removePushGuard } from './guard.ts';
 import { runIndex } from './indexer.ts';
 import { relativeInside } from './paths.ts';
 
-export const TEMPLATE_DIR = resolve(import.meta.dirname, '..', '..', 'template');
+/** Root of the brain code repository this CLI runs from. */
+export const CODE_ROOT = resolve(import.meta.dirname, '..', '..');
+
+export const TEMPLATE_DIR = join(CODE_ROOT, 'template');
 
 const RENAMES: Record<string, string> = { _gitignore: '.gitignore', _gitattributes: '.gitattributes' };
 
@@ -25,6 +28,8 @@ export interface InitOptions {
     /** Private mode without push guard: no question, a remote is allowed. */
     allowPush?: boolean;
     askPath?: () => string;
+    /** brain code repository, where no knowledge folder may be created (default: CODE_ROOT). */
+    codeRoot?: string;
     /** Asks whether a private knowledge folder stays local only; without it the push guard is on. */
     askPushGuard?: () => boolean;
     templateDir?: string;
@@ -86,6 +91,10 @@ export function initBrain(options: InitOptions): InitResult {
     const cwd = resolve(options.cwd);
     const top = gitOutput(cwd, ['rev-parse', '--show-toplevel']);
     const configRoot = top ?? cwd;
+    if (realpathSync(configRoot) === realpathSync(options.codeRoot ?? CODE_ROOT)) {
+        throw new Error('Das ist das brain-Code-Repository – hier keinen Wissens-Ordner anlegen. '
+            + 'Zum Ausprobieren: mkdir /tmp/brain-test && cd /tmp/brain-test && brain init --private .');
+    }
     if (existsSync(join(configRoot, CONFIG_FILE))) {
         throw new Error(`Hier gibt es bereits einen Wissens-Ordner: ${join(configRoot, CONFIG_FILE)}`);
     }

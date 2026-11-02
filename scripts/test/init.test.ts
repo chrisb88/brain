@@ -132,6 +132,24 @@ test('initBrain asks for the mode only after checking for an existing brain.yml'
     assert.equal(asked, false);
 });
 
+test('initBrain refuses the brain code repository before asking or writing', () => {
+    const repo = project();
+    let asked = false;
+    assert.throws(
+        () => initBrain({ cwd: join(repo), path: 'knowledge', codeRoot: repo, askMode: () => { asked = true; return 'project'; } }),
+        /Das ist das brain-Code-Repository – hier keinen Wissens-Ordner anlegen\. Zum Ausprobieren: mkdir \/tmp\/brain-test && cd \/tmp\/brain-test && brain init --private \./,
+    );
+    assert.equal(asked, false);
+    assert.equal(existsSync(join(repo, 'brain.yml')), false);
+    assert.equal(existsSync(join(repo, 'knowledge')), false);
+});
+
+test('initBrain refuses the brain code repository from a subfolder', () => {
+    const repo = project();
+    writeFile(repo, 'scripts/x.txt', '');
+    assert.throws(() => initBrain({ cwd: join(repo, 'scripts'), path: 'knowledge', private: false, codeRoot: repo }), /brain-Code-Repository/);
+});
+
 const refusals: Array<[string, () => InitOptions, RegExp]> = [
     ['outside a git repository', () => ({ cwd: emptyDir(), path: 'knowledge', private: false }), /muss in einem Git-Repository laufen – für einen privaten Wissens-Ordner: brain init --private/],
     ['an existing brain.yml', () => {

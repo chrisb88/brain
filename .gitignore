@@ -1,3 +1,5 @@
 scripts/node_modules/
 .claude/settings.local.json
 .obsidian/
+# knowledge data never belongs in the code repository (brain init refuses here)
+brain.yml

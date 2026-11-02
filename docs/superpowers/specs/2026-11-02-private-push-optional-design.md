@@ -83,6 +83,10 @@ Brain: Pushen erlauben: in brain.yml „push_guard: false“ setzen, dann „bra
 
 Bestehende Hooks bekommen die neue Meldung mit `brain init --update` (der Hook wird dabei neu geschrieben; Markierungszeile unverändert).
 
+## 3c. Kein Wissens-Ordner im brain-Code-Repository
+
+`brain init` lehnt ab, wenn die Konfigurationswurzel das Repository ist, aus dem die CLI läuft (`CODE_ROOT`, zwei Ebenen über `scripts/src/`) – vor jeder Frage und jedem Schreibzugriff: „Das ist das brain-Code-Repository – hier keinen Wissens-Ordner anlegen. Zum Ausprobieren: mkdir /tmp/brain-test && cd /tmp/brain-test && brain init --private .“ Zusätzlich steht `brain.yml` in der `.gitignore` des Code-Repositorys (schützt auch bei weiteren Klonen oder von Hand angelegter Datei).
+
 ## 4. `brain init --update`
 
 **`brain.yml` neu schreiben:** `brain init --update` liest `brain.yml` (mit den Prüfungen aus Abschnitt 2) und schreibt sie im aktuellen Format neu – dieselbe Funktion wie `brain init` (`formatBrainConfig`). Damit kommen künftige Formatänderungen (Kommentare, neue Schlüssel mit Voreinstellung) bei jedem `--update` in bestehende Dateien:
