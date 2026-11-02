@@ -63,7 +63,25 @@ Ablauf (Änderungen gegenüber heute fett):
 
 `--allow-push` ohne `--private` → Fehler „--allow-push nur mit --private“. `--allow-push` mit `--update` → Fehler wie heute bei `--private`.
 
-Die Frage kommt nach der Pfad-Frage (`Wissens-Ordner [knowledge]:`), damit alle Eingaben vor dem ersten Schreibzugriff abgefragt sind.
+Die Frage kommt nach der Modus-Frage (Abschnitt 3a) und der Pfad-Frage (`Wissens-Ordner [knowledge]:`), damit alle Eingaben vor dem ersten Schreibzugriff abgefragt sind.
+
+## 3a. Modus-Frage: `brain init` ohne `--private`/`--project`
+
+- Neues Flag `--project` (Gegenstück zu `--private`). Beide zusammen → Fehler „--private und --project schließen sich aus“. `--project` mit `--update` → Fehler „Verwendung: brain init --update“; `--project` mit `--allow-push` → Fehler „--allow-push nur mit --private“.
+- Ohne beide Flags und mit Terminal fragt `brain init` zuerst nach dem Modus: `Modus – project (Ordner im Projekt-Repository, mit allen geteilt, die Zugriff auf das Repository haben) oder private (eigenes Repository, nur für dich)? [project/private] `. Gültig: `project`, `projekt`, `private`, `privat` (Groß/klein egal); sonst Frage wiederholen. Keine Voreinstellung – die Entscheidung ist zu folgenreich.
+- Ohne beide Flags und ohne Terminal: `project` wie bisher.
+- Reihenfolge der Fragen: Modus → Pfad → Push-Schutz (nur `private`). Die Modus-Frage kommt nach der Prüfung auf eine vorhandene `brain.yml` und vor der Prüfung „muss in einem Git-Repository laufen“ (die vom Modus abhängt).
+
+## 3b. Meldung des Push-Schutzes
+
+Der `pre-push`-Hook nennt den Ausweg:
+
+```
+Brain: Dieses Repository ist privat (mode: private, push_guard: true) und darf nicht gepusht werden.
+Brain: Pushen erlauben: in brain.yml „push_guard: false“ setzen, dann „brain init --update“ ausführen.
+```
+
+Bestehende Hooks bekommen die neue Meldung mit `brain init --update` (der Hook wird dabei neu geschrieben; Markierungszeile unverändert).
 
 ## 4. `brain init --update`
 
