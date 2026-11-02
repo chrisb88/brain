@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { loadCategories } from '../src/categories.ts';
 import { checkBrain } from '../src/check.ts';
-import { loadBrainConfig } from '../src/config.ts';
+import { formatBrainConfig, loadBrainConfig } from '../src/config.ts';
 import { hasPushGuard } from '../src/guard.ts';
 import { initBrain, type InitOptions, updateBrainConfig } from '../src/init.ts';
 import { emptyDir, entry, git, LAUF, read, runCli, stubClaude, writeFile } from './helpers.ts';
@@ -41,7 +41,7 @@ function hooksPath(repo: string): string {
 test('initBrain creates a project brain in a subfolder without touching the project or committing', () => {
     const repo = project();
     const result = initBrain({ cwd: repo, path: 'knowledge', private: false });
-    assert.deepEqual(result, { configRoot: repo, brainDir: join(repo, 'knowledge'), mode: 'project', createdRepo: false });
+    assert.deepEqual(result, { configRoot: repo, brainDir: join(repo, 'knowledge'), mode: 'project', pushGuard: false, createdRepo: false });
     assert.deepEqual(loadBrainConfig(repo), { configRoot: repo, brainDir: join(repo, 'knowledge'), path: 'knowledge', mode: 'project', pushGuard: false });
     for (const rel of ['.gitignore', '.gitattributes', 'CLAUDE.md', 'categories.yml', 'inbox/.gitkeep', 'INDEX.md', 'graph.json']) {
         assert.ok(existsSync(join(repo, 'knowledge', rel)), rel);
@@ -71,9 +71,39 @@ test('initBrain asks for the path when none is given', () => {
 test('initBrain --private creates the repository with push guard', () => {
     const dir = emptyDir();
     const result = initBrain({ cwd: dir, path: '.', private: true });
-    assert.deepEqual(result, { configRoot: dir, brainDir: dir, mode: 'private', createdRepo: true });
+    assert.deepEqual(result, { configRoot: dir, brainDir: dir, mode: 'private', pushGuard: true, createdRepo: true });
+    assert.equal(hasPushGuard(dir), true);
+    assert.equal(read(dir, 'brain.yml'), formatBrainConfig('.', 'private', true));
     assert.notEqual(hooksPath(dir), '');
     assert.deepEqual(checkBrain(dir, 'private', 'off').errors, []);
+});
+
+test('initBrain --private with allowPush accepts a remote and pushes', () => {
+    const dir = emptyDir();
+    const bare = emptyDir();
+    git(bare, 'init', '-q', '--bare');
+    git(dir, 'init', '-q');
+    git(dir, 'remote', 'add', 'origin', bare);
+    const result = initBrain({ cwd: dir, path: '.', private: true, allowPush: true });
+    assert.equal(result.pushGuard, false);
+    assert.equal(hasPushGuard(dir), false);
+    assert.match(read(dir, 'brain.yml'), /push_guard: false/);
+    git(dir, 'add', '-A');
+    git(dir, '-c', 'user.email=test@example.com', '-c', 'user.name=Test', 'commit', '-q', '-m', 'init');
+    git(dir, 'push', '-q', 'origin', 'HEAD:refs/heads/main');
+    assert.notEqual(git(bare, 'rev-parse', 'refs/heads/main').trim(), '');
+});
+
+test('initBrain asks for the push guard after the path', () => {
+    const asked: string[] = [];
+    const result = initBrain({
+        cwd: emptyDir(),
+        private: true,
+        askPath: () => { asked.push('path'); return '.'; },
+        askPushGuard: () => { asked.push('guard'); return false; },
+    });
+    assert.deepEqual(asked, ['path', 'guard']);
+    assert.equal(result.pushGuard, false);
 });
 
 const refusals: Array<[string, () => InitOptions, RegExp]> = [
@@ -93,6 +123,7 @@ const refusals: Array<[string, () => InitOptions, RegExp]> = [
         git(repo, 'remote', 'add', 'origin', 'https://example.com/x.git');
         return { cwd: repo, path: 'knowledge', private: true };
     }, /Privater Wissens-Ordner nur in einem Repository ohne Remote/],
+    ['--allow-push without --private', () => ({ cwd: project(), path: 'knowledge', private: false, allowPush: true }), /--allow-push nur mit --private/],
 ];
 for (const [label, options, error] of refusals) {
     test(`initBrain refuses ${label} without writing anything`, () => {
@@ -194,4 +225,65 @@ test('cli init turns on auto-update for the brain marketplace in .claude/setting
         extraKnownMarketplaces: { brain: { source: { source: 'github', repo: 'chrisb88/brain' }, autoUpdate: true } },
         enabledPlugins: { 'brain@brain': true },
     });
+});
+
+const CLI_ENV = { BRAIN_ROOT: '', PATH: '/usr/bin:/bin', BRAIN_SEARCH: 'off' };
+
+test('cli init --private without a terminal keeps the push guard', () => {
+    const dir = emptyDir();
+    const result = runCli(dir, ['init', '--private', '.'], '', dir, CLI_ENV);
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /\(mode: private, push guard: on\)/);
+    assert.match(read(dir, 'brain.yml'), /push_guard: true/);
+});
+
+test('cli init --private --allow-push prints the remote hint', () => {
+    const dir = emptyDir();
+    const result = runCli(dir, ['init', '--private', '--allow-push', '.'], '', dir, CLI_ENV);
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /\(mode: private, push guard: off\)/);
+    assert.match(result.stdout, /Hinweis: brain prüft nicht, wer das Remote lesen kann – für privates Wissen kein öffentliches Repository verwenden\./);
+});
+
+test('cli init --update rewrites an old brain.yml', () => {
+    const repo = project();
+    initBrain({ cwd: repo, path: 'knowledge', private: false });
+    writeFile(repo, 'brain.yml', 'path: knowledge\nmode: project\n');
+    const first = runCli(repo, ['init', '--update'], '', repo);
+    assert.equal(first.status, 0, first.stderr);
+    assert.match(first.stdout, /^  - brain\.yml$/m);
+    assert.equal(read(repo, 'brain.yml'), formatBrainConfig('knowledge', 'project'));
+    assert.equal(existsSync(join(repo, 'knowledge', 'brain.yml')), false);
+    assert.equal(runCli(repo, ['init', '--update'], '', repo).stdout, 'Konfiguration ist aktuell.\n');
+});
+
+test('cli init --update follows push_guard', () => {
+    const dir = emptyDir();
+    initBrain({ cwd: dir, path: '.', private: true });
+    writeFile(dir, 'brain.yml', formatBrainConfig('.', 'private', false));
+    const off = runCli(dir, ['init', '--update']);
+    assert.equal(off.status, 0, off.stderr);
+    assert.match(off.stdout, /Push-Schutz entfernt/);
+    assert.equal(hasPushGuard(dir), false);
+    writeFile(dir, 'brain.yml', formatBrainConfig('.', 'private', true));
+    assert.match(runCli(dir, ['init', '--update']).stdout, /Push-Schutz installiert/);
+    assert.equal(hasPushGuard(dir), true);
+});
+
+test('cli init --update rejects an invalid brain.yml', () => {
+    const dir = emptyDir();
+    initBrain({ cwd: dir, path: '.', private: true });
+    writeFile(dir, 'brain.yml', 'path: .\nmode: private\npush_guard: no\n');
+    const result = runCli(dir, ['init', '--update']);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /push_guard muss true oder false sein/);
+    assert.equal(read(dir, 'brain.yml'), 'path: .\nmode: private\npush_guard: no\n');
+});
+
+test('cli init --update --allow-push is refused', () => {
+    const dir = emptyDir();
+    initBrain({ cwd: dir, path: '.', private: true });
+    const result = runCli(dir, ['init', '--update', '--allow-push']);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /Verwendung: brain init --update/);
 });

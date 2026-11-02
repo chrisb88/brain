@@ -22,3 +22,18 @@ export function promptLine(question: string): string {
     }
     return Buffer.from(bytes).toString('utf8').replace(/\r$/, '').trim();
 }
+
+/** Parses a yes/no answer: empty → fallback, y/yes/j/ja → true, n/no/nein → false, anything else → null. */
+export function parseYesNo(answer: string, fallback: boolean): boolean | null {
+    const value = answer.trim().toLowerCase();
+    if (value === '') {
+        return fallback;
+    }
+    if (['y', 'yes', 'j', 'ja'].includes(value)) {
+        return true;
+    }
+    if (['n', 'no', 'nein'].includes(value)) {
+        return false;
+    }
+    return null;
+}
