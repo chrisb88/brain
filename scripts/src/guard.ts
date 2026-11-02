@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 export const PUSH_GUARD_MARKER = '# brain: this repository must never be pushed.';
@@ -32,6 +32,26 @@ export function installPushGuard(root: string): void {
     mkdirSync(join(file, '..'), { recursive: true });
     writeFileSync(file, HOOK, 'utf8');
     chmodSync(file, 0o755);
+}
+
+/** True when the brain pre-push hook (with marker) is installed; false outside a git repository. */
+export function hasPushGuard(root: string): boolean {
+    let file: string;
+    try {
+        file = hookFile(root);
+    } catch {
+        return false;
+    }
+    return existsSync(file) && readFileSync(file, 'utf8').includes(PUSH_GUARD_MARKER);
+}
+
+/** Deletes the brain pre-push hook; a foreign hook and core.hooksPath stay. Returns true when deleted. */
+export function removePushGuard(root: string): boolean {
+    if (!hasPushGuard(root)) {
+        return false;
+    }
+    rmSync(hookFile(root));
+    return true;
 }
 
 export function pushGuardErrors(root: string): string[] {

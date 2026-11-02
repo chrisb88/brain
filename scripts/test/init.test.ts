@@ -6,6 +6,7 @@ import { test } from 'node:test';
 import { loadCategories } from '../src/categories.ts';
 import { checkBrain } from '../src/check.ts';
 import { loadBrainConfig } from '../src/config.ts';
+import { hasPushGuard } from '../src/guard.ts';
 import { initBrain, type InitOptions, updateBrainConfig } from '../src/init.ts';
 import { emptyDir, entry, git, LAUF, read, runCli, stubClaude, writeFile } from './helpers.ts';
 
@@ -110,7 +111,7 @@ test('updateBrainConfig only touches template files, never data', () => {
     writeFile(brainDir, 'wiki/gesundheit/laufen.md', entry({ title: 'Laufen', category: 'gesundheit', sources: [LAUF] }));
     writeFile(brainDir, 'CLAUDE.md', 'veraltet');
     const data = ['categories.yml', `${LAUF}.md`, 'wiki/gesundheit/laufen.md'].map((rel) => [rel, readFileSync(join(brainDir, rel))] as const);
-    assert.deepEqual(updateBrainConfig(brainDir, 'project'), ['CLAUDE.md']);
+    assert.deepEqual(updateBrainConfig(brainDir, false), ['CLAUDE.md']);
     for (const [rel, bytes] of data) {
         assert.deepEqual(readFileSync(join(brainDir, rel)), bytes, rel);
     }
@@ -121,7 +122,16 @@ test('updateBrainConfig reinstalls a removed push guard in private mode', () => 
     const dir = emptyDir();
     initBrain({ cwd: dir, path: '.', private: true });
     git(dir, 'config', '--unset', 'core.hooksPath');
-    updateBrainConfig(dir, 'private');
+    updateBrainConfig(dir, true);
+    assert.deepEqual(checkBrain(dir, 'private', 'off').errors, []);
+});
+
+test('updateBrainConfig removes the push guard when push_guard is false', () => {
+    const dir = emptyDir();
+    initBrain({ cwd: dir, path: '.', private: true });
+    updateBrainConfig(dir, false);
+    assert.equal(hasPushGuard(dir), false);
+    updateBrainConfig(dir, true);
     assert.deepEqual(checkBrain(dir, 'private', 'off').errors, []);
 });
 

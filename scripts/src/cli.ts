@@ -352,7 +352,7 @@ function run(argv: string[], now: Date): number {
                     throw new Error('Verwendung: brain init --update');
                 }
                 const current = brainConfig();
-                const changed = updateBrainConfig(current.brainDir, current.mode);
+                const changed = updateBrainConfig(current.brainDir, current.pushGuard);
                 console.log(changed.length === 0
                     ? 'Konfiguration ist aktuell.'
                     : ['Aktualisiert (bitte prüfen und committen):', ...changed.map((rel) => `  - ${rel}`)].join('\n'));

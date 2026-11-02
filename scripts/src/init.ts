@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSy
 import { dirname, join, resolve } from 'node:path';
 import { saveCategories } from './categories.ts';
 import { CONFIG_FILE, type BrainMode, formatBrainConfig } from './config.ts';
-import { installPushGuard } from './guard.ts';
+import { installPushGuard, removePushGuard } from './guard.ts';
 import { runIndex } from './indexer.ts';
 import { relativeInside } from './paths.ts';
 
@@ -53,8 +53,8 @@ function gitOutput(dir: string, args: string[]): string | null {
     }
 }
 
-/** Copies changed template files into the knowledge folder, installs the push guard in private mode; returns changed paths. */
-export function updateBrainConfig(brainDir: string, mode: BrainMode, templateDir = TEMPLATE_DIR): string[] {
+/** Copies changed template files into the knowledge folder, installs or removes the push guard; returns changed paths. */
+export function updateBrainConfig(brainDir: string, pushGuard: boolean, templateDir = TEMPLATE_DIR): string[] {
     const changed: string[] = [];
     for (const [source, targetRel] of templateFiles(templateDir)) {
         const content = readFileSync(join(templateDir, source));
@@ -66,8 +66,10 @@ export function updateBrainConfig(brainDir: string, mode: BrainMode, templateDir
         writeFileSync(file, content);
         changed.push(targetRel);
     }
-    if (mode === 'private') {
+    if (pushGuard) {
         installPushGuard(brainDir);
+    } else {
+        removePushGuard(brainDir);
     }
     return changed;
 }
@@ -111,7 +113,7 @@ export function initBrain(options: InitOptions): InitResult {
         execFileSync('git', ['-C', cwd, 'init', '-q'], { stdio: 'pipe' });
     }
     mkdirSync(brainDir, { recursive: true });
-    updateBrainConfig(brainDir, mode, options.templateDir);
+    updateBrainConfig(brainDir, mode === 'private', options.templateDir);
     for (const dir of ['inbox', 'archive', 'wiki']) {
         mkdirSync(join(brainDir, dir), { recursive: true });
     }
