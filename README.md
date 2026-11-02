@@ -12,14 +12,16 @@ Based on the approach by [The Node AI](https://www.youtube.com/watch?v=mHSOsy_us
 
 ## Two modes: project or private
 
-| | **Project** (`brain init <folder>`) | **Private** (`brain init --private <dir>`) |
+| | **Project** (`brain init <folder>`) | **Private** (`brain init --private [--allow-push] <dir>`) |
 |---|---|---|
 | Where the knowledge lives | a folder inside the project repository | its own Git repository |
-| Who sees it | everyone with access to the project repository – knowledge is committed and pushed with the code | only you – the repository has no remote and is protected against pushing |
+| Who sees it | everyone with access to the project repository – knowledge is committed and pushed with the code | only you – by default the repository has no remote and is protected against pushing; with `--allow-push` you may add a remote of your own (backup drive, own server, private repository) |
 | Good for | architecture decisions, domain knowledge, how-tos, onboarding | personal notes, learning, anything you would not share with the team |
-| Backup | the project's remote | your responsibility |
+| Backup | the project's remote | your responsibility – e.g. a remote of your own (`--allow-push`) |
 
 > **Project mode shares everything you ingest.** Once committed, wiki entries and archived originals are visible to all collaborators. Don't ingest personal or confidential notes into a project brain – use a private brain for those.
+
+brain cannot tell who can read a remote – don't use a public repository for private knowledge.
 
 Both modes use the same layout and commands.
 
@@ -61,12 +63,14 @@ brain init knowledge          # brain.yml + knowledge/, plugin enabled for this 
 git add brain.yml knowledge .claude/settings.json && git commit -m "Add project knowledge"
 ```
 
-Private knowledge (own repository, only for you, never pushed):
+Private knowledge (own repository, only for you):
 
 ```bash
 mkdir ~/knowledge && cd ~/knowledge
 brain init --private .
 ```
+
+`brain init --private` asks whether the knowledge folder stays local only (default: yes – no remote, every push is rejected). Answer no, or pass `--allow-push`, to allow a remote, e.g. for backups. To switch later, change `push_guard` in `brain.yml`, run `brain init --update` and commit `brain.yml`. `brain init --update` always rewrites `brain.yml` in the current format – your own comments in that file are lost.
 
 `brain init` also enables the plugin for the project: it declares the `brain` marketplace and the plugin in `.claude/settings.json` (`extraKnownMarketplaces` with `autoUpdate`, `enabledPlugins`). Team members run `brain setup` once after cloning (see below). If `brain init` printed a `claude plugin …` hint instead, run that command first – `.claude/settings.json` only exists afterwards.
 
@@ -104,7 +108,7 @@ After changing the level run `brain qmd setup` in the repository. Each knowledge
 
 ## What is your knowledge and what can be rebuilt
 
-**Your knowledge lives only in the knowledge folder** – `archive/` (the original notes), `wiki/` (the condensed entries) and `categories.yml` – together with `brain.yml` at the repository root. Commit it and keep the repository backed up (project mode: the project's remote; private mode: no remote by design, so back up the repository yourself). Losing these files means losing knowledge.
+**Your knowledge lives only in the knowledge folder** – `archive/` (the original notes), `wiki/` (the condensed entries) and `categories.yml` – together with `brain.yml` at the repository root. Commit it and keep the repository backed up (project mode: the project's remote; private mode: no remote by default, so back up the repository yourself or allow a remote of your own with `push_guard: false`). Losing these files means losing knowledge.
 
 Not committed and not rebuildable: notes waiting in `inbox/` exist only on your machine until `/brain:ingest` archives them, and `LOG.md` is a local log of brain operations (history only, no knowledge).
 
