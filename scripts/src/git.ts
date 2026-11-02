@@ -34,6 +34,11 @@ function brainRelative(root: string, top: string): (path: string) => string {
     return (path) => toPosix(relative(base, join(top, path)));
 }
 
+/** Knowledge folder relative to the repository top (posix), "." for the top itself. */
+export function brainPathInRepo(root: string): string {
+    return toPosix(relative(realpathSync(repoTop(root)), realpathSync(root))) || '.';
+}
+
 /** Changed or untracked (not ignored) files inside the knowledge folder, relative to it. */
 export function uncommittedChanges(root: string): string[] {
     const toBrain = brainRelative(root, repoTop(root));

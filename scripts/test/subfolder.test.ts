@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { checkBrain } from '../src/check.ts';
 import { uncommittedChanges } from '../src/git.ts';
-import { GARMIN, git, initGit, projectWithBrain, writeFile } from './helpers.ts';
+import { GARMIN, git, initGit, projectWithBrain, validBrain, writeFile } from './helpers.ts';
 
 const cases: Array<[string, (brain: string) => void, RegExp | null]> = [
     ['modified file', (brain) => writeFile(brain, `${GARMIN}.md`, 'geändert\n'), new RegExp(`^archive: ${GARMIN}\\.md wurde verändert$`, 'm')],
@@ -40,7 +40,24 @@ test('uncommittedChanges lists only changes inside the knowledge folder', () => 
     assert.deepEqual(uncommittedChanges(brain), []);
     writeFile(brain, 'wiki/technik/neu.md', 'x');
     assert.deepEqual(uncommittedChanges(brain), ['wiki/technik/neu.md']);
-    assert.match(checkBrain(brain).hints.join('\n'), /Nicht committete Änderungen im Wissens-Ordner \(1 Datei\(en\)\) – prüfen und committen/);
+    assert.ok(checkBrain(brain).hints.includes(
+        'Nicht committete Änderungen im Wissens-Ordner (1 Datei(en)) – prüfen (git status knowledge) und im Repo-Root committen: '
+        + 'git add knowledge && git commit -m "brain: Wissen aktualisieren"',
+    ));
+});
+
+test('the commit hint uses "." for a knowledge folder at the repository root', () => {
+    const root = validBrain();
+    initGit(root);
+    writeFile(root, 'wiki/technik/neu.md', 'x');
+    assert.match(checkBrain(root).hints.join('\n'), /prüfen \(git status \.\) und im Repo-Root committen: git add \. && git commit -m "brain: Wissen aktualisieren"/);
+});
+
+test('the commit hint quotes a knowledge folder with spaces', () => {
+    const { repo, brain } = projectWithBrain('docs/Mein Wissen');
+    initGit(repo);
+    writeFile(brain, 'wiki/technik/neu.md', 'x');
+    assert.match(checkBrain(brain).hints.join('\n'), /git add "docs\/Mein Wissen" && git commit/);
 });
 
 test('project mode ignores remotes and the push guard', () => {

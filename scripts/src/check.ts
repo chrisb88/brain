@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { isKnownCategory, UNCATEGORIZED } from './categories.ts';
 import type { BrainMode } from './config.ts';
-import { archiveIntegrityErrors, isGitRepo, uncommittedChanges } from './git.ts';
+import { archiveIntegrityErrors, brainPathInRepo, isGitRepo, uncommittedChanges } from './git.ts';
 import { hasPushGuard, pushGuardErrors } from './guard.ts';
 import { qmdCheck } from './qmd.ts';
 import { extractLinks, getRelated, headings, parseOpenPoints, splitFrontmatter } from './markdown.ts';
@@ -190,7 +190,10 @@ export function checkBrain(
         }
         const changed = uncommittedChanges(root);
         if (changed.length > 0) {
-            hints.push(`Nicht committete Änderungen im Wissens-Ordner (${changed.length} Datei(en)) – prüfen und committen`);
+            const path = brainPathInRepo(root);
+            const arg = /^[\w./-]+$/.test(path) ? path : `"${path}"`;
+            hints.push(`Nicht committete Änderungen im Wissens-Ordner (${changed.length} Datei(en)) – prüfen (git status ${arg}) `
+                + `und im Repo-Root committen: git add ${arg} && git commit -m "brain: Wissen aktualisieren"`);
         }
     } else {
         hints.push('Kein Git-Repository – Archiv-Integrität wurde nicht geprüft.');
