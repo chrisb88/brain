@@ -1,17 +1,18 @@
 #!/usr/bin/env -S node --disable-warning=ExperimentalWarning
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { join, relative, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { archiveNote } from './archive.ts';
 import { addCategory, listCategories } from './category.ts';
 import { checkBrain } from './check.ts';
-import { type BrainMode, brainConfig, brainStarts, findBrainConfig, rewriteBrainConfig } from './config.ts';
+import { type BrainMode, brainConfig, brainStarts, CONFIG_FILE, findBrainConfig, rewriteBrainConfig } from './config.ts';
+import { commitCommand } from './git.ts';
 import { hasPushGuard } from './guard.ts';
 import { runIndex } from './indexer.ts';
 import { initBrain, updateBrainConfig } from './init.ts';
 import { linkEntries } from './link.ts';
 import { appendLog, isLogOp } from './log.ts';
-import { callerDir } from './paths.ts';
+import { callerDir, toPosix } from './paths.ts';
 import { activatePlugin, enableAutoUpdate, PLUGIN_INSTALL_COMMAND } from './plugin.ts';
 import { parseMode, parseYesNo, promptLine } from './prompt.ts';
 import { findOrphanIndexes, isQmdInstalled, qmdIndexReady, removeIndex, runQmd, setupQmd } from './qmd.ts';
@@ -387,11 +388,16 @@ function run(argv: string[], now: Date): number {
                 const current = brainConfig();
                 const guardBefore = hasPushGuard(current.brainDir);
                 const changed = [
-                    ...(rewriteBrainConfig(current) ? ['brain.yml'] : []),
-                    ...updateBrainConfig(current.brainDir, current.pushGuard),
+                    ...(rewriteBrainConfig(current) ? [CONFIG_FILE] : []),
+                    ...updateBrainConfig(current.brainDir, current.pushGuard)
+                        .map((rel) => (current.path === '.' ? rel : `${current.path}/${rel}`)),
                 ];
                 const guardAfter = hasPushGuard(current.brainDir);
-                const lines = changed.length === 0 ? [] : ['Aktualisiert (bitte prüfen und committen):', ...changed.map((rel) => `  - ${rel}`)];
+                const lines = changed.length === 0 ? [] : [
+                    'Aktualisiert (bitte prüfen, Pfade relativ zum Repo-Root):',
+                    ...changed.map((rel) => `  - ${rel}`),
+                    `Im Repo-Root committen: ${commitCommand(changed, 'brain: Konfiguration aktualisieren')}`,
+                ];
                 if (guardBefore !== guardAfter) {
                     lines.push(guardAfter ? 'Push-Schutz installiert' : 'Push-Schutz entfernt');
                 }
@@ -429,7 +435,13 @@ function run(argv: string[], now: Date): number {
             } else {
                 console.log(`Hinweis: Plugin nicht aktiviert – im Repo ausführen: ${PLUGIN_INSTALL_COMMAND}`);
             }
-            console.log('Nächster Schritt: Änderungen prüfen und committen, dann Claude Code im Repo starten.');
+            const relPath = relative(result.configRoot, result.brainDir) || '.';
+            const settings = '.claude/settings.json';
+            const message = 'brain: Wissens-Ordner anlegen';
+            const command = relPath === '.'
+                ? `git add -A && git commit -m "${message}"`
+                : commitCommand([CONFIG_FILE, toPosix(relPath), ...(existsSync(join(result.configRoot, settings)) ? [settings] : [])], message);
+            console.log(`Nächster Schritt: Änderungen prüfen (git status) und im Repo-Root committen: ${command} – dann Claude Code im Repo-Root starten.`);
             console.log('Teammitglieder führen nach dem Klonen einmal „brain setup“ im Repo aus.');
             return 0;
         }

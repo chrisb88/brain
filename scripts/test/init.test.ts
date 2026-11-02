@@ -218,7 +218,7 @@ test('cli init activates the plugin in project scope', () => {
     assert.match(result.stdout, /Wissens-Ordner angelegt: .*knowledge \(mode: project\)/);
     assert.match(result.stdout, /BRAIN_SEARCH=off – qmd wird nicht eingerichtet\./);
     assert.match(result.stdout, /Plugin brain@brain für dieses Projekt aktiviert\./);
-    assert.match(result.stdout, /Änderungen prüfen und committen/);
+    assert.match(result.stdout, /Nächster Schritt: Änderungen prüfen \(git status\) und im Repo-Root committen: git add brain\.yml knowledge && git commit -m "brain: Wissens-Ordner anlegen" – dann Claude Code im Repo-Root starten\./);
     assert.equal(readFileSync(log, 'utf8'), [
         `${repo}|plugin marketplace add chrisb88/brain --scope project`,
         `${repo}|plugin install brain@brain --scope project`,
@@ -269,6 +269,7 @@ test('cli init turns on auto-update for the brain marketplace in .claude/setting
         extraKnownMarketplaces: { brain: { source: { source: 'github', repo: 'chrisb88/brain' }, autoUpdate: true } },
         enabledPlugins: { 'brain@brain': true },
     });
+    assert.match(result.stdout, /git add brain\.yml knowledge \.claude\/settings\.json && git commit -m "brain: Wissens-Ordner anlegen"/);
 });
 
 const CLI_ENV = { BRAIN_ROOT: '', PATH: '/usr/bin:/bin', BRAIN_SEARCH: 'off' };
@@ -296,6 +297,7 @@ test('cli init --update rewrites an old brain.yml', () => {
     const first = runCli(repo, ['init', '--update'], '', repo);
     assert.equal(first.status, 0, first.stderr);
     assert.match(first.stdout, /^  - brain\.yml$/m);
+    assert.match(first.stdout, /^Im Repo-Root committen: git add brain\.yml && git commit -m "brain: Konfiguration aktualisieren"$/m);
     assert.equal(read(repo, 'brain.yml'), formatBrainConfig('knowledge', 'project'));
     assert.equal(existsSync(join(repo, 'knowledge', 'brain.yml')), false);
     assert.equal(runCli(repo, ['init', '--update'], '', repo).stdout, 'Konfiguration ist aktuell.\n');
@@ -353,3 +355,19 @@ for (const [label, args, error] of cliRefusals) {
         assert.equal(existsSync(join(repo, 'brain.yml')), false);
     });
 }
+
+test('cli init --private in a new repository suggests git add -A', () => {
+    const dir = emptyDir();
+    const result = runCli(dir, ['init', '--private', '.'], '', dir, CLI_ENV);
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /git add -A && git commit -m "brain: Wissens-Ordner anlegen"/);
+});
+
+test('cli init --update names the changed files relative to the repository root', () => {
+    const repo = project();
+    initBrain({ cwd: repo, path: 'docs/Mein Wissen', private: false });
+    writeFile(repo, 'docs/Mein Wissen/CLAUDE.md', 'veraltet');
+    const result = runCli(repo, ['init', '--update'], '', repo);
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /^Im Repo-Root committen: git add "docs\/Mein Wissen\/CLAUDE\.md" && git commit -m "brain: Konfiguration aktualisieren"$/m);
+});

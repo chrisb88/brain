@@ -34,6 +34,16 @@ function brainRelative(root: string, top: string): (path: string) => string {
     return (path) => toPosix(relative(base, join(top, path)));
 }
 
+/** Quotes a path for the shell when it contains anything but word characters, dots, slashes and dashes. */
+export function shellArg(path: string): string {
+    return /^[\w./-]+$/.test(path) ? path : `"${path}"`;
+}
+
+/** Suggested command to commit the given paths (relative to the repository root). */
+export function commitCommand(paths: string[], message: string): string {
+    return `git add ${paths.map(shellArg).join(' ')} && git commit -m "${message}"`;
+}
+
 /** Knowledge folder relative to the repository top (posix), "." for the top itself. */
 export function brainPathInRepo(root: string): string {
     return toPosix(relative(realpathSync(repoTop(root)), realpathSync(root))) || '.';
