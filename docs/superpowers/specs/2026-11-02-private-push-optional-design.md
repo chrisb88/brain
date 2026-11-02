@@ -33,6 +33,7 @@ Neuer optionaler Schlüssel `push_guard` (Boolean), nur bei `mode: private` erla
 ```yaml
 # Brain configuration. Created by brain init.
 # After changing this file run: brain init --update
+# brain init --update rewrites this file - your own comments will be lost.
 path: .
 mode: private
 push_guard: false
@@ -69,7 +70,7 @@ Die Frage kommt nach der Pfad-Frage (`Wissens-Ordner [knowledge]:`), damit alle 
 **`brain.yml` neu schreiben:** `brain init --update` liest `brain.yml` (mit den Prüfungen aus Abschnitt 2) und schreibt sie im aktuellen Format neu – dieselbe Funktion wie `brain init` (`formatBrainConfig`). Damit kommen künftige Formatänderungen (Kommentare, neue Schlüssel mit Voreinstellung) bei jedem `--update` in bestehende Dateien:
 
 - Werte bleiben erhalten; fehlende Schlüssel werden mit ihrer Voreinstellung ausdrücklich geschrieben (heute: `push_guard: true` bei `mode: private` ohne den Schlüssel).
-- Eigene Kommentare und Formatierung in `brain.yml` gehen dabei verloren (die Datei ist generiert; der Kopfkommentar sagt das).
+- Eigene Kommentare und Formatierung in `brain.yml` gehen dabei verloren; die dritte Kopfkommentarzeile sagt das ausdrücklich.
 - Ist `brain.yml` ungültig, bricht `--update` mit der Fehlermeldung ab, bevor etwas geschrieben wird.
 - Ändert sich der Inhalt, erscheint `brain.yml` in der Liste „Aktualisiert (bitte prüfen und committen)“; sonst nicht.
 

@@ -14,7 +14,7 @@
 
 - Code, CLI-Hilfe (`brain help`) und Kommentare Englisch; Meldungen an den Nutzer und Anweisungsdateien (`SKILL.md`) Deutsch.
 - `brain.yml`-Schlüssel: `push_guard`; Flag: `--allow-push`; Frage: `Nur lokal – Pushen verhindern? [Y/n] `.
-- Kopfkommentar jeder `brain.yml`, exakt zwei Zeilen: `# Brain configuration. Created by brain init.` und `# After changing this file run: brain init --update`.
+- Kopfkommentar jeder `brain.yml`, exakt drei Zeilen: `# Brain configuration. Created by brain init.`, `# After changing this file run: brain init --update` und `# brain init --update rewrites this file - your own comments will be lost.`.
 - `push_guard` fehlt bei `mode: private` → `true`. Bei `mode: project` ist der Schlüssel ein Fehler.
 - Tests nur in temporären Ordnern (`scripts/test/helpers.ts`), nie gegen echte Daten.
 - Version: `0.3.1` → `0.4.0` in `scripts/package.json` **und** `plugin/.claude-plugin/plugin.json`.
@@ -40,7 +40,7 @@
 **Interfaces:**
 - Produces:
   - `BrainConfig.pushGuard: boolean` (bei `project` immer `false`)
-  - `formatBrainConfig(path: string, mode: BrainMode, pushGuard: boolean = mode === 'private'): string` – Kopfkommentar (2 Zeilen), dann `path`, `mode`, bei `private` zusätzlich `push_guard`.
+  - `formatBrainConfig(path: string, mode: BrainMode, pushGuard: boolean = mode === 'private'): string` – Kopfkommentar (3 Zeilen), dann `path`, `mode`, bei `private` zusätzlich `push_guard`.
   - `rewriteBrainConfig(config: BrainConfig): boolean` – schreibt `formatBrainConfig(config.path, config.mode, config.pushGuard)` nach `join(config.configRoot, CONFIG_FILE)`, nur wenn der Inhalt abweicht; gibt `true` zurück, wenn geschrieben wurde.
 
 - [ ] **Step 1: Failing tests in `config.test.ts`**
@@ -48,9 +48,9 @@
 ```ts
 test('formatBrainConfig writes the update hint and push_guard only in private mode', () => {
     assert.equal(formatBrainConfig('.', 'private', false),
-        '# Brain configuration. Created by brain init.\n# After changing this file run: brain init --update\npath: .\nmode: private\npush_guard: false\n');
+        '# Brain configuration. Created by brain init.\n# After changing this file run: brain init --update\n# brain init --update rewrites this file - your own comments will be lost.\npath: .\nmode: private\npush_guard: false\n');
     assert.equal(formatBrainConfig('knowledge', 'project'),
-        '# Brain configuration. Created by brain init.\n# After changing this file run: brain init --update\npath: knowledge\nmode: project\n');
+        '# Brain configuration. Created by brain init.\n# After changing this file run: brain init --update\n# brain init --update rewrites this file - your own comments will be lost.\npath: knowledge\nmode: project\n');
 });
 
 test('loadBrainConfig defaults push_guard to true in private mode and reads false', () => {
