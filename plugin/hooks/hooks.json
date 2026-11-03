@@ -1,7 +1,7 @@
 {
   "hooks": {
     "SessionStart": [
-      { "hooks": [{ "type": "command", "command": "if command -v brain >/dev/null 2>&1; then brain session-start \"${CLAUDE_PLUGIN_ROOT}\"; else echo '{\"systemMessage\":\"Brain: CLI brain fehlt – einmal ./install.sh aus dem brain-Klon ausführen\",\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"Brain: CLI brain fehlt – einmal ./install.sh aus dem brain-Klon ausführen\"}}'; fi" }] }
+      { "hooks": [{ "type": "command", "command": "if command -v brain >/dev/null 2>&1; then brain session-start \"${CLAUDE_PLUGIN_ROOT}\"; else echo '{\"systemMessage\":\"Brain: CLI brain fehlt – installieren: git clone https://github.com/chrisb88/brain.git && cd brain && ./install.sh (Anleitung: https://github.com/chrisb88/brain#installation)\",\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"Brain: CLI brain fehlt – installieren: git clone https://github.com/chrisb88/brain.git && cd brain && ./install.sh (Anleitung: https://github.com/chrisb88/brain#installation)\"}}'; fi" }] }
     ]
   }
 }
