@@ -18,10 +18,10 @@ You choose the mode once, when you create the knowledge folder: `brain init` ask
 |---|---|---|
 | Command | `brain init --project [<folder>]` | `brain init --private [--allow-push] [<folder>]` |
 | Where the knowledge lives | a folder inside an existing project repository | its own Git repository (created if needed) |
-| Who can read it | **everyone who can read the project repository** – once you commit and push, the knowledge travels with the code | **only you** – unless you allow a remote yourself (see [Push guard](#push-guard-private-mode)) |
+| Who can read it | **everyone who can read the project repository** – once you commit and push, the knowledge travels with the code | **only you** – unless you allow a remote yourself (see [Push guard](#private-mode-push-guard-and-backup)) |
 | Pushed | yes, together with the project, by you | by default never: the push guard rejects every push |
 | Good for | architecture decisions, domain knowledge, how-tos, onboarding | personal notes, learning, anything you would not share with the team |
-| Backup | the project's remote | your responsibility – copy the repository, or allow a remote of your own |
+| Backup | the project's remote | with push guard: your own backup without remotes (e.g. `git bundle`); without push guard: a remote of your own – see [Push guard and backup](#private-mode-push-guard-and-backup) |
 
 Both modes use the same folder layout, the same commands and the same plugin. brain never commits and never pushes in either mode – you review and commit knowledge changes like code.
 
@@ -31,18 +31,44 @@ Both modes use the same folder layout, the same commands and the same plugin. br
 
 Committed: `brain.yml`, the knowledge folder (`wiki/`, `archive/`, `categories.yml`, `.gitignore`, `.gitattributes`, `CLAUDE.md`) and `.claude/settings.json`. Not committed (ignored by the knowledge folder's `.gitignore`): notes waiting in `inbox/`, `INDEX.md`, `graph.json` and `LOG.md`.
 
-### Push guard (private mode)
+### Private mode: push guard and backup
 
-`brain init --private` asks: *Nur lokal – Pushen verhindern? [Y/n]* (local only – prevent pushing?). The answer is stored as `push_guard` in `brain.yml`.
+A private brain has no project remote that keeps a copy of your knowledge. `brain init --private` therefore asks one question that decides how you back it up: *Nur lokal – Pushen verhindern? [Y/n]* (local only – prevent pushing?). The answer is stored as `push_guard` in `brain.yml`.
 
-- **Yes (default, `push_guard: true`) – local only.** The repository must not have a remote: `brain init` refuses a repository with a remote, and `brain check` reports one as an error. brain installs a Git `pre-push` hook that rejects every push and says how to allow pushing. Without a terminal (scripts, CI) brain does not ask and uses this setting.
-- **No (or `--allow-push`, `push_guard: false`) – remote allowed.** You may add a remote of your own and push to it yourself, e.g. a backup drive, your own server or a private repository on a Git host. **brain cannot tell who can read a remote** – never use a public repository for private knowledge.
+| | **With push guard** (`Y`, default) | **Without push guard** (`n` or `--allow-push`) |
+|---|---|---|
+| `brain.yml` | `push_guard: true` | `push_guard: false` |
+| Git remotes | **none allowed** – not even one on your own backup drive | allowed – any remote you add yourself |
+| `git push` | rejected by a `pre-push` hook | works normally |
+| Where your knowledge lives | only in this one folder on this machine | in this folder and on every remote you push to |
+| Backup | **your job, outside Git remotes** – see below | push to a remote of your own |
+| Good for | knowledge that must never leave the machine | knowledge you want backed up or on several machines |
 
-Limits of the push guard: it is a local Git hook. It protects against an accidental push, not against a deliberate one (`git push --no-verify` skips it), and it is not part of a clone – a copy of the repository is not protected until you run `brain init --update` in it.
+**With push guard – everything stays local.** brain installs a Git `pre-push` hook that rejects every push and tells you how to allow pushing. The repository must not have a remote at all: `brain init` refuses a repository with a remote, and `brain check` reports one as an error. Without a terminal (scripts, CI) `brain init --private` does not ask and uses this setting.
 
-Claude never adds a remote while the push guard is on, and never pushes in any mode.
+You must take care of backups yourself, without a remote – for example:
 
-**Switch later:** change `push_guard` in `brain.yml`, then run `brain init --update` (installs or removes the hook) and commit `brain.yml`:
+```bash
+# a single file with the whole history; copy it to a backup drive, NAS or cloud folder
+git -C ~/knowledge bundle create /mnt/backup/knowledge-$(date +%F).bundle --all
+# restore: git clone /mnt/backup/knowledge-2026-11-03.bundle ~/knowledge
+```
+
+or a copy of the whole folder with your usual backup tool (rsync, Windows backup of the WSL folder, …). Don't put the live repository itself into a sync folder (OneDrive, Dropbox) – syncing a `.git` folder while Git writes to it can corrupt it; sync a bundle file instead. Without a backup, a broken disk means the knowledge is gone.
+
+**Without push guard – use Git remotes as usual.** brain installs no hook and allows remotes. You add a remote and push yourself (brain and Claude never push):
+
+```bash
+git remote add backup /mnt/backup/knowledge.git      # a bare repository on a backup drive (git init --bare first)
+git remote add origin git@github.com:you/knowledge.git   # or a PRIVATE repository on a Git host
+git push -u backup HEAD                              # pushes the current branch
+```
+
+**brain cannot tell who can read a remote.** A private repository on a Git host is readable by the host and by everyone you grant access; a public repository is readable by everyone. Never push private knowledge to a public repository.
+
+**Limits of the push guard:** it is a local Git hook. It protects against an accidental push, not against a deliberate one (`git push --no-verify` skips it), and it is not part of a clone – a copy of the repository is not protected until you run `brain init --update` in it. Claude never adds a remote while the push guard is on, and never pushes in any mode.
+
+**Switch later:** change `push_guard` in `brain.yml`, then run `brain init --update` (installs or removes the hook) and commit `brain.yml`. From guard on to off, e.g. to start backing up to a remote:
 
 ```bash
 cd ~/knowledge
@@ -52,7 +78,7 @@ git add brain.yml && git commit -m "Allow pushing"
 git remote add backup /mnt/backup/knowledge.git              # a remote of your own
 ```
 
-`brain init --update` only deletes the hook if it is unchanged. If you added your own lines to `.git/hooks/pre-push`, it stops with an error and leaves the file alone – remove the brain lines yourself.
+From off to on: remove all remotes first (`git remote remove <name>`) – `brain check` reports any that are left. `brain init --update` only deletes the hook if it is unchanged. If you added your own lines to `.git/hooks/pre-push`, it stops with an error and leaves the file alone – remove the brain lines yourself.
 
 ### brain.yml
 
@@ -71,7 +97,7 @@ push_guard: true
 |---|---|---|
 | `path` | relative path, `.` for the repository root | the knowledge folder |
 | `mode` | `project`, `private` | see [Two modes](#two-modes-project-or-private) |
-| `push_guard` | `true`, `false` – only with `mode: private`; missing means `true` | see [Push guard](#push-guard-private-mode) |
+| `push_guard` | `true`, `false` – only with `mode: private`; missing means `true` | see [Push guard](#private-mode-push-guard-and-backup) |
 
 After every change to `brain.yml` run `brain init --update`. It always rewrites `brain.yml` in the current format – values are kept, missing keys are written with their default, **your own comments and formatting in this file are lost**.
 
@@ -162,13 +188,14 @@ claude                                   # start Claude Code here, in the reposi
 ```
 
 - `.` makes the repository root the knowledge folder; any other folder name works as well.
-- Push guard: answer `n` (or pass `--allow-push`) if you want to back up to a remote of your own – see [Push guard](#push-guard-private-mode).
-- Backup is your job: with the push guard on there is no remote, so copy the repository regularly.
+- Decide on the push guard before you answer – it decides how you back up (details: [Push guard and backup](#private-mode-push-guard-and-backup)):
+  - **`Y` (push guard on):** the knowledge never leaves this folder. No Git remotes at all – you back up yourself, e.g. with `git bundle` onto a backup drive.
+  - **`n` or `--allow-push` (push guard off):** you may add Git remotes and push to them, e.g. a backup drive or a private repository on a Git host.
 
-**A second machine:** install brain there (steps 1–3), copy or clone the repository, then run in it:
+**A second machine:** install brain there (steps 1–3), then get the repository – without push guard by cloning from your remote, with push guard by copying it or cloning from a bundle (`git clone knowledge.bundle ~/knowledge`). A clone from a bundle has the bundle as remote `origin`; with push guard on remove it (`git remote remove origin`). Then run in it:
 
 ```bash
-brain init --update     # re-installs the push guard – a clone has none
+brain init --update     # re-installs the push guard (if on) – a clone has no hooks
 brain setup             # plugin for this checkout, INDEX.md, qmd index
 ```
 
@@ -275,7 +302,7 @@ With `off`, also disable the `qmd` MCP server once via `/mcp` in Claude Code. `b
 
 ## What is your knowledge and what can be rebuilt
 
-**Your knowledge lives only in the knowledge folder** – `archive/` (the original notes), `wiki/` (the condensed entries) and `categories.yml` – together with `brain.yml` at the repository root. Commit it and keep the repository backed up (project mode: the project's remote; private mode: with the push guard on there is no remote, so back up the repository yourself – or switch the push guard off and push to a remote of your own, see [Push guard](#push-guard-private-mode)). Losing these files means losing knowledge.
+**Your knowledge lives only in the knowledge folder** – `archive/` (the original notes), `wiki/` (the condensed entries) and `categories.yml` – together with `brain.yml` at the repository root. Commit it and keep the repository backed up (project mode: the project's remote; private mode: see [Push guard and backup](#private-mode-push-guard-and-backup)). Losing these files means losing knowledge.
 
 Not committed and not rebuildable: notes waiting in `inbox/` exist only on your machine until `/brain:ingest` archives them, and `LOG.md` is a local log of brain operations (history only, no knowledge).
 
