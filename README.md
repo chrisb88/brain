@@ -10,6 +10,35 @@ Based on the approach by [The Node AI](https://www.youtube.com/watch?v=mHSOsy_us
 
 > **Note:** Instructions, slash commands and wiki entries are written in German. Code, CLI and file formats are English.
 
+## How it works
+
+At its core brain is an ordinary **second brain** in the style of the *LLM wiki* idea described by Andrej Karpathy: a folder of Markdown pages that an LLM writes and maintains for you. Instead of searching your raw notes again for every question, Claude reads each new note **once**, works it into a small set of condensed, cross-linked wiki pages and keeps them up to date. Knowledge accumulates in the wiki; questions are answered from the wiki.
+
+```
+inbox/  ──/brain:ingest──▶  archive/   original notes, unchanged (the sources)
+(raw notes)          └────▶  wiki/      condensed entries by category, [[links]] (written by Claude)
+                                 │
+                       INDEX.md + qmd index
+                                 │
+              /brain:ask, the brain skill while you work ──▶ answers with source links
+```
+
+It has three layers:
+
+| Layer | What | Who writes it |
+|---|---|---|
+| Sources | `archive/` – your notes, archived byte-identical | you (via `inbox/`) |
+| Wiki | `wiki/` – one entry per topic, merged instead of appended, conflicts and open questions marked | Claude |
+| Rules | the knowledge folder's `CLAUDE.md` and the plugin's skill – how entries are written, categorized and linked | brain |
+
+What brain adds on top of the plain idea:
+
+- **A Claude Code plugin** – `/brain:ingest`, `/brain:ask`, a skill that makes Claude look into the brain before answering project questions, and a session hook.
+- **A CLI for the deterministic parts** – building the catalog (`INDEX.md`, `graph.json`), checking that archived originals were never changed, managing categories, setting up the search index. Claude does the writing, the CLI does the bookkeeping.
+- **qmd to save tokens.** Without a search engine, Claude has to read the whole catalog and grep through the wiki to find the right entries – the bigger the brain, the more tokens each question costs. [qmd](https://github.com/tobi/qmd) searches locally and returns only the few best-matching entries, so Claude reads just those. See [Search with qmd](#search-with-qmd).
+
+Everything is plain files in Git: Obsidian-compatible, readable without brain, versioned like code. The search index is only a cache and can be rebuilt at any time.
+
 ## Two modes: project or private
 
 You choose the mode once, when you create the knowledge folder: `brain init` asks for it, or you pass `--project` or `--private`.
@@ -340,7 +369,7 @@ It removes the `brain` CLI and – after confirmation – the qmd indexes of all
 
 ## Credits
 
-This project is based on the second brain approach presented by [The Node AI](https://www.youtube.com/@TheNodeAI) in the video [„Der echte Weg zum Second Brain: Ohne Programmieren. Vergiss Obsidian."](https://www.youtube.com/watch?v=mHSOsy_usAg) (German). Thanks for the inspiration!
+This project is based on the second brain approach presented by [The Node AI](https://www.youtube.com/@TheNodeAI) in the video [„Der echte Weg zum Second Brain: Ohne Programmieren. Vergiss Obsidian."](https://www.youtube.com/watch?v=mHSOsy_usAg) (German), and on the *LLM wiki* idea by Andrej Karpathy – an LLM that maintains a Markdown wiki instead of searching raw documents for every question. Thanks for the inspiration!
 
 ## License
 
