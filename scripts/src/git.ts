@@ -34,9 +34,9 @@ function brainRelative(root: string, top: string): (path: string) => string {
     return (path) => toPosix(relative(base, join(top, path)));
 }
 
-/** Quotes a path for the shell when it contains anything but word characters, dots, slashes and dashes. */
+/** Quotes a path in single quotes for the shell when it contains anything but word characters, dots, slashes and dashes. */
 export function shellArg(path: string): string {
-    return /^[\w./-]+$/.test(path) ? path : `"${path}"`;
+    return /^[\w./-]+$/.test(path) ? path : `'${path.replaceAll("'", "'\\''")}'`;
 }
 
 /** Suggested command to commit the given paths (relative to the repository root). */

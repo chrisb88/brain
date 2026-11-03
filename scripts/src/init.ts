@@ -121,6 +121,9 @@ export function initBrain(options: InitOptions): InitResult {
     if (path === null) {
         throw new Error(`${requested} liegt außerhalb des Repositorys ${configRoot}`);
     }
+    if (path === '.' && !isPrivate) {
+        throw new Error('Im Projekt-Modus braucht der Wissens-Ordner einen eigenen Unterordner (z. B. knowledge), nicht das Repo-Root');
+    }
     for (let dir = brainDir; dir !== configRoot; dir = dirname(dir)) {
         if (existsSync(dir) && !statSync(dir).isDirectory()) {
             throw new Error(`${requested} ist kein Ordner – anderen Wissens-Ordner wählen`);

@@ -3,7 +3,7 @@ import { mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { checkBrain } from '../src/check.ts';
-import { uncommittedChanges } from '../src/git.ts';
+import { shellArg, uncommittedChanges } from '../src/git.ts';
 import { GARMIN, git, initGit, projectWithBrain, validBrain, writeFile } from './helpers.ts';
 
 const cases: Array<[string, (brain: string) => void, RegExp | null]> = [
@@ -57,7 +57,14 @@ test('the commit hint quotes a knowledge folder with spaces', () => {
     const { repo, brain } = projectWithBrain('docs/Mein Wissen');
     initGit(repo);
     writeFile(brain, 'wiki/technik/neu.md', 'x');
-    assert.match(checkBrain(brain).hints.join('\n'), /git add "docs\/Mein Wissen" && git commit/);
+    assert.match(checkBrain(brain).hints.join('\n'), /git add 'docs\/Mein Wissen' && git commit/);
+});
+
+test('shellArg quotes shell metacharacters safely', () => {
+    assert.equal(shellArg('docs/knowledge'), 'docs/knowledge');
+    assert.equal(shellArg('notes$(touch x)'), "'notes$(touch x)'");
+    assert.equal(shellArg('a`b`"c'), "'a`b`\"c'");
+    assert.equal(shellArg("Chris' Wissen"), "'Chris'\\'' Wissen'");
 });
 
 test('project mode ignores remotes and the push guard', () => {

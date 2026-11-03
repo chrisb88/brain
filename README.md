@@ -52,6 +52,8 @@ git add brain.yml && git commit -m "Allow pushing"
 git remote add backup /mnt/backup/knowledge.git              # a remote of your own
 ```
 
+`brain init --update` only deletes the hook if it is unchanged. If you added your own lines to `.git/hooks/pre-push`, it stops with an error and leaves the file alone – remove the brain lines yourself.
+
 ### brain.yml
 
 `brain.yml` at the repository root holds the settings of the knowledge folder:
@@ -130,7 +132,7 @@ brain init --private .                  # asks about the push guard; add --allow
 git add -A && git commit -m "Add private knowledge"
 ```
 
-Without a terminal and without `--project`/`--private`, `brain init` uses project mode. `--project` and `--private` together, `--allow-push` without `--private` and a repository with a remote while the push guard is on are refused before anything is written.
+Without a terminal and without `--project`/`--private`, `brain init` uses project mode. In project mode the knowledge folder must be a subfolder (e.g. `knowledge`), never the repository root itself. `--project` and `--private` together, `--allow-push` without `--private` and a repository with a remote while the push guard is on are refused before anything is written.
 
 What `brain init` does: it writes `brain.yml` at the repository root, creates the knowledge folder (`inbox/`, `archive/`, `wiki/`, `categories.yml` and the files from `template/`), installs the push guard if chosen, sets up the qmd index for your [search level](#search-levels) and enables the plugin for the repository: it declares the `brain` marketplace and the plugin in `.claude/settings.json` (`extraKnownMarketplaces` with `autoUpdate`, `enabledPlugins`). Team members run `brain setup` once after cloning (see below). If `brain init` printed a `claude plugin …` hint instead, run that command first – `.claude/settings.json` only exists afterwards.
 

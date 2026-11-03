@@ -60,6 +60,23 @@ test('removePushGuard deletes the brain hook', () => {
     assert.equal(removePushGuard(root), false);
 });
 
+test('removePushGuard refuses a brain hook with additional lines and keeps it', () => {
+    const root = validBrain();
+    initGit(root);
+    const content = `#!/bin/sh\nrun-lint\n${PUSH_GUARD_MARKER}\nexit 1\n`;
+    writeFileSync(hookPath(root), content);
+    assert.throws(() => removePushGuard(root), /Push-Schutz nicht entfernt: .*pre-push enthält mehr als den brain-Hook/);
+    assert.equal(readFileSync(hookPath(root), 'utf8'), content);
+});
+
+test('removePushGuard deletes the hook of an earlier brain version', () => {
+    const root = validBrain();
+    initGit(root);
+    writeFileSync(hookPath(root), `#!/bin/sh\n${PUSH_GUARD_MARKER}\necho "Brain: Dieses Repository ist privat (mode: private) und darf nicht gepusht werden." >&2\nexit 1\n`);
+    assert.equal(removePushGuard(root), true);
+    assert.equal(hasPushGuard(root), false);
+});
+
 test('removePushGuard keeps a foreign hook', () => {
     const root = validBrain();
     initGit(root);
