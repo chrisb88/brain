@@ -94,6 +94,8 @@ brain has two parts that get onto your machine separately:
 
 The plugin calls the CLI, so you always need both. Adding the marketplace alone is not enough – the session start then reports that the CLI is missing.
 
+Every user does steps 1–3 once per machine, whatever the mode. Then continue with [Getting started](#getting-started).
+
 ### 1. Requirements
 
 | Needed | Check | Install |
@@ -104,9 +106,9 @@ The plugin calls the CLI, so you always need both. Adding the marketplace alone 
 | [Claude Code](https://claude.com/claude-code) | `claude --version` | see the Claude Code docs |
 | [qmd](https://github.com/tobi/qmd) – optional | `qmd --version` | `npm install -g @tobilu/qmd` |
 
-Without qmd, set `export BRAIN_SEARCH=off` (e.g. in `~/.zshrc`); brain then searches with `INDEX.md` and grep, see [Search levels](#search-levels).
+qmd is the search engine behind brain. Whether you need it and which search level fits your machine: see [Search with qmd](#search-with-qmd). Without qmd, set `export BRAIN_SEARCH=off` (e.g. in `~/.zshrc`).
 
-### 2. Clone and install – once per machine
+### 2. Clone and install
 
 ```bash
 git clone https://github.com/chrisb88/brain.git ~/brain
@@ -130,11 +132,6 @@ brain --version     # e.g. 0.4.1
 
 `brain: command not found` means npm's global bin folder is not on your PATH – check with `npm prefix -g` and add `<prefix>/bin` to your PATH.
 
-### 4. Next step
-
-- **Your own knowledge** (new project brain or private brain): [Create a knowledge folder](#create-a-knowledge-folder) – `brain init` also enables the plugin for that repository.
-- **A project that already has a brain** (team member): [Team members](#team-members-after-cloning) – `brain setup` in your clone of the project.
-
 ### Update
 
 - **Plugin:** automatic. Repositories set up with `brain init` – project and private – declare `autoUpdate` for the `brain` marketplace in `.claude/settings.json`. Elsewhere enable it once: `/plugin` → Marketplaces tab → `brain` → Enable auto-update (third-party marketplaces are not auto-updated by default), or update by hand with `claude plugin update brain@brain`. Claude Code checks for updates during a session; the new version loads at the next start.
@@ -142,9 +139,80 @@ brain --version     # e.g. 0.4.1
 
 If plugin and CLI versions differ, the session start prints a warning – then update the part that is behind.
 
-## Create a knowledge folder
+## Getting started
 
-Interactively – `brain init` asks for everything it needs:
+After [Installation](#installation), pick the path that fits:
+
+| You want to … | Path |
+|---|---|
+| keep knowledge only for yourself | [A. Private brain](#a-private-brain) |
+| add a brain to a project – you are the first one | [B. Project brain: set it up](#b-project-brain-set-it-up) |
+| work in a project that already has a brain | [C. Project brain: join as a team member](#c-project-brain-join-as-a-team-member) |
+
+### A. Private brain
+
+Your own Git repository, only for you. Start in an empty folder – brain creates the repository:
+
+```bash
+mkdir ~/knowledge && cd ~/knowledge
+brain init --private .
+# Nur lokal – Pushen verhindern? [Y/n]   → Enter = push guard on (no remote, every push rejected)
+git add -A && git commit -m "Add private knowledge"
+claude                                   # start Claude Code here, in the repository root
+```
+
+- `.` makes the repository root the knowledge folder; any other folder name works as well.
+- Push guard: answer `n` (or pass `--allow-push`) if you want to back up to a remote of your own – see [Push guard](#push-guard-private-mode).
+- Backup is your job: with the push guard on there is no remote, so copy the repository regularly.
+
+**A second machine:** install brain there (steps 1–3), copy or clone the repository, then run in it:
+
+```bash
+brain init --update     # re-installs the push guard – a clone has none
+brain setup             # plugin for this checkout, INDEX.md, qmd index
+```
+
+### B. Project brain: set it up
+
+You add a knowledge folder to an existing project repository. Everything you ingest is shared with everyone who can read the repository – read [Project mode: what is shared](#project-mode-what-is-shared) first.
+
+```bash
+cd my-project                            # the project repository, at its root
+brain init --project knowledge           # brain.yml + knowledge/, plugin enabled for this project
+git status                               # review what brain created
+git add brain.yml knowledge .claude/settings.json && git commit -m "Add project knowledge"
+git push
+claude                                   # start Claude Code in the repository root
+```
+
+- The knowledge folder must be a subfolder (`knowledge`, `docs/knowledge`, …), never the repository root.
+- `.claude/settings.json` is what makes the plugin show up for your team members – commit it.
+- Then tell your team members to follow [C](#c-project-brain-join-as-a-team-member), e.g. with a link to this README in the project's own README.
+
+### C. Project brain: join as a team member
+
+The project already contains `brain.yml`, the knowledge folder and `.claude/settings.json`. You do **not** run `brain init`.
+
+```bash
+# once per machine: Installation steps 1–3 (clone brain, ./install.sh)
+git clone <project-url> my-project       # or git pull in your existing clone
+cd my-project
+brain setup                              # once per clone of the project
+claude                                   # start Claude Code in the repository root
+```
+
+`brain setup`:
+
+1. enables the plugin for this checkout – Claude Code registers project plugins per directory, so without it a new clone shows the plugin with an error such as "not cached",
+2. builds `INDEX.md` and `graph.json` (generated, not committed),
+3. creates the qmd index for your [search level](#search-levels) – with the default `hybrid` this downloads ~2.5 GB of models once; to avoid that use `BRAIN_SEARCH=keyword brain setup` and set the level permanently,
+4. restores `.claude/settings.json` if Claude Code only reordered it.
+
+Afterwards the session start shows a line like `Brain: knowledge/ (mode: project, search: hybrid)` – brain is active.
+
+### brain init in detail
+
+Interactively – without flags `brain init` asks for everything it needs:
 
 ```bash
 brain init
@@ -153,39 +221,11 @@ brain init
 # Nur lokal – Pushen verhindern? [Y/n]                     → push guard (private only)
 ```
 
-Or with flags, without questions:
+With flags: `brain init [--project | --private [--allow-push]] [<folder>]`. Without a terminal and without `--project`/`--private`, `brain init` uses project mode. `--project` and `--private` together, `--allow-push` without `--private`, the repository root as folder in project mode and a repository with a remote while the push guard is on are refused before anything is written.
 
-**Project** – run it inside the project repository:
-
-```bash
-cd my-project
-brain init --project knowledge          # brain.yml + knowledge/, plugin enabled for this project
-git add brain.yml knowledge .claude/settings.json && git commit -m "Add project knowledge"
-```
-
-**Private** – in an empty folder; brain creates the Git repository:
-
-```bash
-mkdir ~/knowledge && cd ~/knowledge
-brain init --private .                  # asks about the push guard; add --allow-push to allow a remote
-git add -A && git commit -m "Add private knowledge"
-```
-
-Without a terminal and without `--project`/`--private`, `brain init` uses project mode. In project mode the knowledge folder must be a subfolder (e.g. `knowledge`), never the repository root itself. `--project` and `--private` together, `--allow-push` without `--private` and a repository with a remote while the push guard is on are refused before anything is written.
-
-What `brain init` does: it writes `brain.yml` at the repository root, creates the knowledge folder (`inbox/`, `archive/`, `wiki/`, `categories.yml` and the files from `template/`), installs the push guard if chosen, sets up the qmd index for your [search level](#search-levels) and enables the plugin for the repository: it declares the `brain` marketplace and the plugin in `.claude/settings.json` (`extraKnownMarketplaces` with `autoUpdate`, `enabledPlugins`). Team members run `brain setup` once after cloning (see below). If `brain init` printed a `claude plugin …` hint instead, run that command first – `.claude/settings.json` only exists afterwards.
+What `brain init` does: it writes `brain.yml` at the repository root, creates the knowledge folder (`inbox/`, `archive/`, `wiki/`, `categories.yml` and the files from `template/`), installs the push guard if chosen, sets up the qmd index for your [search level](#search-levels) and enables the plugin for the repository: it declares the `brain` marketplace and the plugin in `.claude/settings.json` (`extraKnownMarketplaces` with `autoUpdate`, `enabledPlugins`). If `brain init` printed a `claude plugin …` hint instead, run that command first – `.claude/settings.json` only exists afterwards. At the end it prints the exact `git add … && git commit …` command for what it created.
 
 `brain init` never commits.
-
-### Team members (after cloning)
-
-```bash
-# once per machine: Installation steps 1–3 (clone brain, ./install.sh)
-cd my-project
-brain setup         # once per clone
-```
-
-`brain setup` enables the plugin for this checkout (Claude Code registers project plugins per directory, so a new clone shows the plugin with an error such as "not cached" until then), builds `INDEX.md` and `graph.json` (generated, not committed) and creates the qmd index for your `BRAIN_SEARCH` level. With the default `hybrid` this downloads ~2.5 GB of models; use `BRAIN_SEARCH=keyword brain setup` (and set the level permanently, see [Search levels](#search-levels)) to avoid that. Then start Claude Code in the repository root. If `.claude/settings.json` was only reordered by Claude Code, `brain setup` restores the committed file.
 
 ## Usage
 
@@ -195,17 +235,43 @@ Start Claude Code in the repository root – project-scoped plugins (`.claude/se
 - `/brain:ask [--archive | --all] <question>` – answer from the knowledge only.
 - Ask project questions while you work – the `brain` skill searches the knowledge first.
 
-## Search levels
+## Search with qmd
 
-Set per machine, e.g. in `~/.zshrc`:
+### What qmd is
 
-| `BRAIN_SEARCH` | Search | Needs |
-|---|---|---|
-| `hybrid` (default) | qmd with query expansion, embeddings, reranking | qmd + ~2.5 GB models, GPU recommended |
-| `keyword` | qmd BM25 only | qmd, no models |
-| `off` | `INDEX.md` and grep | nothing – disable the `qmd` MCP server once via `/mcp` |
+[qmd](https://github.com/tobi/qmd) is a search engine for Markdown files that runs entirely on your machine. It keeps a search index of the files and offers two kinds of search:
 
-After changing the level run `brain qmd setup` in the repository. Each knowledge folder has its own qmd index (`brain-<repo>-<hash>`); `brain qmd prune` removes indexes of knowledge folders that no longer exist.
+- **keyword search (BM25)** – finds entries that contain the words of the query and ranks them by how often and where the words occur. Fast, no models needed.
+- **semantic search** – small AI models (run locally, downloaded once from Hugging Face) turn entries and queries into vectors, so qmd also finds entries that mean the same thing in other words. In `hybrid` mode qmd also expands the query into variants and reranks the results with a model.
+
+Your notes never leave your machine – only the models are downloaded. brain gives every knowledge folder its own qmd index (`brain-<repo>-<hash>`) with two collections: `wiki` (searched by default) and `archive` (only on request). Claude uses qmd through the `qmd` MCP server of the plugin; you can use it yourself with `brain qmd …`, e.g. `brain qmd search Ingress -c wiki`.
+
+The index stays current on its own: `/brain:ingest` updates it after every run (`hybrid` also re-embeds the changed entries), and every session start runs `brain index` and `qmd update` in the background.
+
+### Search levels
+
+The level is set **per machine** with the environment variable `BRAIN_SEARCH`, not per knowledge folder – it depends on your hardware, not on the knowledge. Team members of the same project may use different levels.
+
+| `BRAIN_SEARCH` | How Claude searches | Needs | Pros | Cons |
+|---|---|---|---|---|
+| `hybrid` (default) | `INDEX.md` + qmd: keyword and semantic search, query expansion, reranking | qmd, ~2.5 GB models (one-time download), a GPU is recommended | finds entries by meaning, even with other words or mixed German/English; best ranking | large download; slower queries and embedding on a CPU-only machine; uses RAM while searching |
+| `keyword` | `INDEX.md` + qmd keyword search (BM25) | qmd, no models | fast on any machine; small; no download | finds only entries that contain the query words – synonyms and paraphrases are missed |
+| `off` | `INDEX.md` (catalog of all entries) + grep in `wiki/` | nothing | nothing to install | Claude has to read the catalog and grep – fine for a small brain, slower and more tokens as it grows; no ranking |
+
+Which one to choose:
+
+- **`hybrid`** if your machine has a GPU (or you accept slower searches) and the brain is large or written in varying words.
+- **`keyword`** on laptops without a GPU, in WSL without GPU access, or if you don't want the download – a good default for most team members.
+- **`off`** if you cannot install qmd or the brain has only a few dozen entries.
+
+Set the level permanently in your shell profile, then rebuild the index of each knowledge folder:
+
+```bash
+echo 'export BRAIN_SEARCH=keyword' >> ~/.zshrc && source ~/.zshrc
+cd my-project && brain qmd setup
+```
+
+With `off`, also disable the `qmd` MCP server once via `/mcp` in Claude Code. `brain qmd prune` removes indexes of knowledge folders that no longer exist.
 
 ## What is your knowledge and what can be rebuilt
 
