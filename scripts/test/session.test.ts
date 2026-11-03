@@ -37,7 +37,7 @@ test('brain --version prints the CLI version', () => {
     const result = runCli(emptyDir(), ['--version'], '', emptyDir(), { BRAIN_ROOT: '' });
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.stdout, `${cliVersion()}\n`);
-    assert.equal(cliVersion(), '0.4.1');
+    assert.equal(cliVersion(), '0.5.0');
 });
 
 test('session-start without a knowledge folder prints nothing', () => {
@@ -65,7 +65,7 @@ test('sessionLines shows the push guard in private mode', () => {
 const warnings: Array<[string, string | null, Record<string, string>, RegExp]> = [
     ['version mismatch', '0.0.1', {}, /Warnung: Plugin 0\.0\.1 und CLI \d+\.\d+\.\d+ passen nicht zusammen/],
     ['broken plugin.json', null, {}, /Warnung: Plugin-Version nicht lesbar/],
-    ['invalid BRAIN_SEARCH', '0.4.1', { BRAIN_SEARCH: 'fast' }, /Brain: Hinweis – BRAIN_SEARCH=fast ist ungültig/],
+    ['invalid BRAIN_SEARCH', '0.5.0', { BRAIN_SEARCH: 'fast' }, /Brain: Hinweis – BRAIN_SEARCH=fast ist ungültig/],
 ];
 for (const [label, version, env, expected] of warnings) {
     test(`session-start warns on ${label} and still exits 0`, () => {
@@ -106,6 +106,19 @@ for (const folder of ['knowledge', 'Mein Wissen']) {
         assert.ok(existsSync(join(brain, 'INDEX.md')));
     });
 }
+
+test('session-start with BRAIN_SEARCH=hybrid also embeds new entries in the background', async () => {
+    const { repo, brain } = projectWithBrain();
+    const config = mkdtempSync(join(tmpdir(), 'qmd-config-'));
+    writeFileSync(join(config, `${qmdIndexName(brain)}.yml`), stringify({ collections: { wiki: { path: join(brain, 'wiki') } } }));
+    const { bin, marker } = stubQmd(0);
+    const result = sessionStart(repo, pluginDir(cliVersion()), { BRAIN_SEARCH: 'hybrid', PATH: `${bin}:/usr/bin:/bin`, QMD_CONFIG_DIR: config });
+    assert.equal(result.status, 0, result.stderr);
+    for (let i = 0; i < 150 && !(existsSync(marker) && readFileSync(marker, 'utf8').includes('embed')); i++) {
+        await sleep(100);
+    }
+    assert.match(readFileSync(marker, 'utf8'), /^--index brain-.* embed\n$/);
+});
 
 test('session-start without a qmd index hints at brain setup and only refreshes the index', async () => {
     const { repo, brain } = projectWithBrain();

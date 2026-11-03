@@ -52,15 +52,9 @@ export function sessionOutput(context: string[], warnings: string[]): string {
     });
 }
 
-function quote(arg: string): string {
-    return `'${arg.replaceAll("'", `'\\''`)}'`;
-}
-
-/** Runs brain index (and qmd update if requested) in a detached process; returns immediately. */
-export function startBackgroundRefresh(config: BrainConfig, updateQmd: boolean): void {
-    const brain = (...args: string[]): string => [process.execPath, '--disable-warning=ExperimentalWarning', CLI, ...args].map(quote).join(' ');
-    const script = updateQmd ? `${brain('index')} && ${brain('qmd', 'update')}` : brain('index');
-    const child = spawn('sh', ['-c', script], {
+/** Runs brain refresh (INDEX.md, graph.json, qmd index per search level) in a detached process; returns immediately. */
+export function startBackgroundRefresh(config: BrainConfig): void {
+    const child = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', CLI, 'refresh'], {
         cwd: config.brainDir,
         detached: true,
         stdio: 'ignore',

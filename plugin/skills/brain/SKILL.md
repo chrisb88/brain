@@ -65,6 +65,7 @@ Kommt eine Wissensfrage während anderer Arbeit (z. B. beim Programmieren) auf, 
 | `brain link <eintrag> <eintrag> […]` / `brain link --remove …` | gegenseitige `## Related`-Links setzen/entfernen |
 | `brain log <op> <ziel> [<beschreibung>]` | Zeile an `LOG.md` anhängen (Ops: archive, create, update, link, unlink, conflict, resolve, recategorize, category, ingest) |
 | `brain index` | `INDEX.md` und `graph.json` neu erzeugen |
+| `brain refresh` | alles Abgeleitete aktualisieren: `INDEX.md`, `graph.json` und qmd-Index gemäß Suchstufe (`hybrid` bettet neue Einträge ein) – nach einem `git pull` in laufender Session; läuft auch bei jedem Sessionstart |
 | `brain check` | Fehler (Exit 1) und Hinweise (offene Punkte, Einträge ohne Kategorie, uncommittete Änderungen, qmd-Index) |
 | `brain category add <slug> --name <name> [--description <text>]` | neue Kategorie registrieren – nur nach Freigabe durch den Nutzer |
 | `brain category list` | Kategorien mit Anzahl der Einträge anzeigen |

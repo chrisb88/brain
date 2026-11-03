@@ -15,7 +15,7 @@ import { appendLog, isLogOp } from './log.ts';
 import { callerDir, toPosix } from './paths.ts';
 import { activatePlugin, enableAutoUpdate, PLUGIN_INSTALL_COMMAND } from './plugin.ts';
 import { parseMode, parseYesNo, promptLine } from './prompt.ts';
-import { findOrphanIndexes, isQmdInstalled, qmdIndexReady, removeIndex, runQmd, setupQmd } from './qmd.ts';
+import { findOrphanIndexes, isQmdInstalled, qmdIndexReady, refreshQmd, removeIndex, runQmd, setupQmd } from './qmd.ts';
 import { mergeCategory, moveEntry, renameCategory } from './recategorize.ts';
 import { remember } from './remember.ts';
 import { searchLevel } from './search.ts';
@@ -82,6 +82,9 @@ Commands:
       "brain qmd update", "brain qmd mcp".
   index
       Rebuild INDEX.md and graph.json from the markdown files.
+  refresh
+      Bring everything derived up to date after a git pull: rebuild INDEX.md and graph.json, then
+      update the qmd index (hybrid also embeds new entries). Runs at every session start as well.
   check
       Validate the knowledge folder. Errors exit with 1; hints list open conflicts/unclear
       points, uncategorized entries, uncommitted changes and qmd index problems.
@@ -107,7 +110,7 @@ Examples:
   brain category add travel --name "Urlaub" --description "Reisen, Ausflüge, Urlaubsplanung."
   brain recategorize --move wiki/_uncategorized/tax-idea finance
   BRAIN_SEARCH=keyword brain qmd setup
-  brain index && brain check`;
+  brain refresh && brain check`;
 
 /** Resolves a path argument relative to the directory the user called the command from. */
 function callerPath(path: string): string {
@@ -263,6 +266,23 @@ function run(argv: string[], now: Date): number {
         case 'index': {
             runIndex(root);
             console.log('INDEX.md und graph.json erzeugt');
+            return 0;
+        }
+        case 'refresh': {
+            if (rest.length > 0) {
+                throw new Error('Verwendung: brain refresh');
+            }
+            runIndex(root);
+            console.log('INDEX.md und graph.json erzeugt');
+            const level = searchLevel();
+            if (level === 'off') {
+                console.log('BRAIN_SEARCH=off – kein qmd-Index.');
+            } else if (!qmdIndexReady(root)) {
+                console.log('Hinweis: qmd-Index fehlt – brain qmd setup ausführen');
+            } else {
+                refreshQmd(root, level);
+                console.log(`qmd-Index aktualisiert (${level}).`);
+            }
             return 0;
         }
         case 'remember': {
@@ -455,7 +475,7 @@ function run(argv: string[], now: Date): number {
                 const qmdReady = level !== 'off' && qmdIndexReady(found.brainDir);
                 const [context, ...warnings] = sessionLines(found, rest[0] ?? '', level, qmdReady);
                 console.log(sessionOutput([context], warnings));
-                startBackgroundRefresh(found, qmdReady);
+                startBackgroundRefresh(found);
             } catch (error) {
                 console.log(sessionOutput([], [`Brain: Hinweis – ${(error as Error).message}`]));
             }
