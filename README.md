@@ -39,6 +39,25 @@ What brain adds on top of the plain idea:
 
 Everything is plain files in Git: Obsidian-compatible, readable without brain, versioned like code. The search index is only a cache and can be rebuilt at any time.
 
+### Contradictions and open questions are marked – resolve them
+
+New notes do not always agree with what the wiki already says. brain never silently overwrites one version with the other:
+
+1. **Claude asks first.** If a note contradicts an entry or is unclear, `/brain:ingest` asks you and writes the answer into the wiki.
+2. **If it can't be settled now, it is marked.** Every affected entry gets the same callout directly under its title, with an ID and the list of affected entries:
+
+   ```markdown
+   > [!warning] Conflict C-20261103-1
+   > Affects: [[wiki/technik/ingress]], [[wiki/technik/cluster-setup]]
+   > Notiz vom 03.11. nennt Port 8443, der Eintrag 443 – welcher gilt? (Quellen: …)
+   ```
+
+   An open question looks the same with `> [!question] Unclear Q-YYYYMMDD-N`. The callouts are visible in Obsidian, in the plain file and to Claude whenever it reads the entry.
+3. **`brain check` lists every open point** (`Offen: C-20261103-1 (Widerspruch) – betrifft …`) and reports an error if the callouts of one ID differ between the affected entries. `/brain:ingest` shows the open points in its summary.
+4. **You resolve it.** Tell Claude which version is right (e.g. *„C-20261103-1: 8443 gilt“*). Claude corrects the entries and removes the callout from **all** affected entries; you can also edit the files yourself. Commit the result.
+
+Resolve open points soon: until then the wiki holds two versions of the truth, and answers built on these entries carry the uncertainty along.
+
 ## Two modes: project or private
 
 You choose the mode once, when you create the knowledge folder: `brain init` asks for it, or you pass `--project` or `--private`.
