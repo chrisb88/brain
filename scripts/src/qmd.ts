@@ -92,6 +92,14 @@ export function setupQmd(root: string, level: Exclude<SearchLevel, 'off'>): void
     }
 }
 
+/** Brings the existing index up to date: re-reads changed files; hybrid also embeds entries without vectors. */
+export function refreshQmd(root: string, level: Exclude<SearchLevel, 'off'>): void {
+    mustRunQmd(root, ['update']);
+    if (level === 'hybrid') {
+        mustRunQmd(root, ['embed']);
+    }
+}
+
 function readYaml(file: string): unknown {
     try {
         return parse(readFileSync(file, 'utf8'));

@@ -201,7 +201,7 @@ Keep the clone – the CLI runs from it. `install.sh`:
 ### 3. Check
 
 ```bash
-brain --version     # e.g. 0.4.1
+brain --version     # e.g. 0.5.0
 ```
 
 `brain: command not found` means npm's global bin folder is not on your PATH – check with `npm prefix -g` and add `<prefix>/bin` to your PATH.
@@ -310,6 +310,19 @@ Start Claude Code in the repository root – project-scoped plugins (`.claude/se
 - `/brain:ask [--archive | --all] <question>` – answer from the knowledge only.
 - Ask project questions while you work – the `brain` skill searches the knowledge first.
 
+### After git pull
+
+`INDEX.md`, `graph.json` and the qmd index are not committed – every machine builds its own. When you pull knowledge that someone else ingested, yours catch up like this:
+
+- **Next Claude Code start:** the session start runs `brain refresh` in the background – nothing to do. A few seconds after the start (with `hybrid` on a machine without GPU possibly longer, while new entries are embedded) the new knowledge is searchable.
+- **Pull during a running session:** restart Claude Code, or run in the repository:
+
+  ```bash
+  brain refresh
+  ```
+
+  It rebuilds `INDEX.md` and `graph.json` and updates the qmd index for your [search level](#search-levels): `keyword` re-reads changed files, `hybrid` also embeds new entries, `off` skips qmd.
+
 ## Search with qmd
 
 ### What qmd is
@@ -321,7 +334,7 @@ Start Claude Code in the repository root – project-scoped plugins (`.claude/se
 
 Your notes never leave your machine – only the models are downloaded. brain gives every knowledge folder its own qmd index (`brain-<repo>-<hash>`) with two collections: `wiki` (searched by default) and `archive` (only on request). Claude uses qmd through the `qmd` MCP server of the plugin; you can use it yourself with `brain qmd …`, e.g. `brain qmd search Ingress -c wiki`.
 
-The index stays current on its own: `/brain:ingest` updates it after every run (`hybrid` also re-embeds the changed entries), and every session start runs `brain index` and `qmd update` in the background.
+The index stays current on its own: `/brain:ingest` updates it after every run, and every session start runs `brain refresh` in the background – `INDEX.md`, `graph.json` and the qmd index, with `hybrid` including the embeddings of new entries. See [After git pull](#after-git-pull).
 
 ### Search levels
 
@@ -358,7 +371,7 @@ Everything else is derived from those files and can be deleted and rebuilt at an
 
 | What | Where | Rebuild with |
 |---|---|---|
-| `INDEX.md`, `graph.json` | knowledge folder (not committed) | `brain index` – also runs in the background at every session start |
+| `INDEX.md`, `graph.json` | knowledge folder (not committed) | `brain refresh` (or only `brain index`) – also runs in the background at every session start |
 | qmd index (config and database) | `~/.config/qmd/brain-<repo>-<hash>.yml`, `~/.cache/qmd/brain-<repo>-<hash>.sqlite` | `brain qmd setup` – `hybrid` re-embeds all entries; the models stay cached in `~/.cache/qmd/models` |
 | Plugin installation for this checkout | Claude Code (`~/.claude/plugins`) | `brain setup` |
 | brain CLI | your brain clone | `./install.sh` |
@@ -367,7 +380,7 @@ Everything else is derived from those files and can be deleted and rebuilt at an
 
 ## CLI
 
-`brain help` lists all commands. Highlights: `brain setup`, `brain check`, `brain index`, `brain category list`, `brain recategorize`, `brain init --update`, `brain qmd setup`, `brain qmd prune`.
+`brain help` lists all commands. Highlights: `brain setup`, `brain refresh`, `brain check`, `brain index`, `brain category list`, `brain recategorize`, `brain init --update`, `brain qmd setup`, `brain qmd prune`.
 
 ## Uninstall
 
