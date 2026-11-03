@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { parse, stringify } from 'yaml';
 import { callerDir, relativeInside } from './paths.ts';
@@ -15,9 +15,17 @@ export interface BrainConfig {
     /** Knowledge folder relative to configRoot (posix), "." for configRoot itself. */
     path: string;
     mode: BrainMode;
+    /** Push guard (no remote, every push rejected); only in private mode, default true. */
+    pushGuard: boolean;
 }
 
-const KEYS = ['path', 'mode'];
+const KEYS = ['path', 'mode', 'push_guard'];
+
+const HEADER = [
+    '# Brain configuration. Created by brain init.',
+    '# After changing this file run: brain init --update',
+    '# brain init --update rewrites this file - your own comments will be lost.',
+].join('\n');
 
 function isMode(value: unknown): value is BrainMode {
     return typeof value === 'string' && (BRAIN_MODES as readonly string[]).includes(value);
@@ -47,16 +55,37 @@ export function loadBrainConfig(configRoot: string): BrainConfig {
     if (!isMode(record.mode)) {
         throw new Error(`${file}: mode muss project oder private sein`);
     }
+    if (record.push_guard !== undefined) {
+        if (record.mode !== 'private') {
+            throw new Error(`${file}: push_guard nur bei mode: private`);
+        }
+        if (typeof record.push_guard !== 'boolean') {
+            throw new Error(`${file}: push_guard muss true oder false sein`);
+        }
+    }
+    const pushGuard = record.mode === 'private' && record.push_guard !== false;
     const brainDir = resolve(root, record.path);
     const path = brainDir === root ? '.' : relativeInside(root, brainDir);
     if (path === null) {
         throw new Error(`${file}: path „${record.path}“ liegt außerhalb von ${root}`);
     }
-    return { configRoot: root, brainDir, path, mode: record.mode };
+    return { configRoot: root, brainDir, path, mode: record.mode, pushGuard };
 }
 
-export function formatBrainConfig(path: string, mode: BrainMode): string {
-    return `# Brain configuration. Created by brain init.\n${stringify({ path, mode })}`;
+export function formatBrainConfig(path: string, mode: BrainMode, pushGuard: boolean = mode === 'private'): string {
+    const data = mode === 'private' ? { path, mode, push_guard: pushGuard } : { path, mode };
+    return `${HEADER}\n${stringify(data)}`;
+}
+
+/** Writes brain.yml in the current format; returns true when the file changed. */
+export function rewriteBrainConfig(config: BrainConfig): boolean {
+    const file = join(config.configRoot, CONFIG_FILE);
+    const content = formatBrainConfig(config.path, config.mode, config.pushGuard);
+    if (readFileSync(file, 'utf8') === content) {
+        return false;
+    }
+    writeFileSync(file, content);
+    return true;
 }
 
 /** Returns the nearest directory at or above start that contains brain.yml, or null. */

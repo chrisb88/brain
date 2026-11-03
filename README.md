@@ -2,7 +2,7 @@
 
 brain keeps your knowledge (a "second brain") in plain Markdown files, maintained by [Claude Code](https://claude.com/claude-code) and searchable with [qmd](https://github.com/tobi/qmd).
 
-Use it **per project** or **privately** – see [Two modes](#two-modes-project-or-private).
+Use it **per project** (knowledge is committed to the project repository and shared with everyone who can read it) or **privately** (own repository, only for you) – see [Two modes](#two-modes-project-or-private).
 
 You drop raw notes into an inbox; `/brain:ingest` archives the originals unchanged and works the knowledge into condensed, categorized, cross-linked wiki entries. `/brain:ask` answers questions strictly from the brain, with source links. While you code, Claude consults the brain on its own when a question touches project knowledge.
 
@@ -12,16 +12,68 @@ Based on the approach by [The Node AI](https://www.youtube.com/watch?v=mHSOsy_us
 
 ## Two modes: project or private
 
-| | **Project** (`brain init <folder>`) | **Private** (`brain init --private <dir>`) |
+You choose the mode once, when you create the knowledge folder: `brain init` asks for it, or you pass `--project` or `--private`.
+
+| | **Project** | **Private** |
 |---|---|---|
-| Where the knowledge lives | a folder inside the project repository | its own Git repository |
-| Who sees it | everyone with access to the project repository – knowledge is committed and pushed with the code | only you – the repository has no remote and is protected against pushing |
+| Command | `brain init --project [<folder>]` | `brain init --private [--allow-push] [<folder>]` |
+| Where the knowledge lives | a folder inside an existing project repository | its own Git repository (created if needed) |
+| Who can read it | **everyone who can read the project repository** – once you commit and push, the knowledge travels with the code | **only you** – unless you allow a remote yourself (see [Push guard](#push-guard-private-mode)) |
+| Pushed | yes, together with the project, by you | by default never: the push guard rejects every push |
 | Good for | architecture decisions, domain knowledge, how-tos, onboarding | personal notes, learning, anything you would not share with the team |
-| Backup | the project's remote | your responsibility |
+| Backup | the project's remote | your responsibility – copy the repository, or allow a remote of your own |
 
-> **Project mode shares everything you ingest.** Once committed, wiki entries and archived originals are visible to all collaborators. Don't ingest personal or confidential notes into a project brain – use a private brain for those.
+Both modes use the same folder layout, the same commands and the same plugin. brain never commits and never pushes in either mode – you review and commit knowledge changes like code.
 
-Both modes use the same layout and commands.
+### Project mode: what is shared
+
+> **Project mode shares everything you ingest.** `/brain:ingest` writes wiki entries and archives your original notes byte-identical in the knowledge folder. Once you commit and push, everyone with read access to the project repository can read both – today's collaborators, future ones, and for a public repository the whole internet. Deleting an entry later does not remove it from the Git history. Don't ingest personal or confidential notes (passwords, customer data, personal matters) into a project brain – use a private brain for those.
+
+Committed: `brain.yml`, the knowledge folder (`wiki/`, `archive/`, `categories.yml`, `.gitignore`, `.gitattributes`, `CLAUDE.md`) and `.claude/settings.json`. Not committed (ignored by the knowledge folder's `.gitignore`): notes waiting in `inbox/`, `INDEX.md`, `graph.json` and `LOG.md`.
+
+### Push guard (private mode)
+
+`brain init --private` asks: *Nur lokal – Pushen verhindern? [Y/n]* (local only – prevent pushing?). The answer is stored as `push_guard` in `brain.yml`.
+
+- **Yes (default, `push_guard: true`) – local only.** The repository must not have a remote: `brain init` refuses a repository with a remote, and `brain check` reports one as an error. brain installs a Git `pre-push` hook that rejects every push and says how to allow pushing. Without a terminal (scripts, CI) brain does not ask and uses this setting.
+- **No (or `--allow-push`, `push_guard: false`) – remote allowed.** You may add a remote of your own and push to it yourself, e.g. a backup drive, your own server or a private repository on a Git host. **brain cannot tell who can read a remote** – never use a public repository for private knowledge.
+
+Limits of the push guard: it is a local Git hook. It protects against an accidental push, not against a deliberate one (`git push --no-verify` skips it), and it is not part of a clone – a copy of the repository is not protected until you run `brain init --update` in it.
+
+Claude never adds a remote while the push guard is on, and never pushes in any mode.
+
+**Switch later:** change `push_guard` in `brain.yml`, then run `brain init --update` (installs or removes the hook) and commit `brain.yml`:
+
+```bash
+cd ~/knowledge
+sed -i 's/^push_guard: true$/push_guard: false/' brain.yml   # or edit the file by hand
+brain init --update                                          # prints "Push-Schutz entfernt"
+git add brain.yml && git commit -m "Allow pushing"
+git remote add backup /mnt/backup/knowledge.git              # a remote of your own
+```
+
+`brain init --update` only deletes the hook if it is unchanged. If you added your own lines to `.git/hooks/pre-push`, it stops with an error and leaves the file alone – remove the brain lines yourself.
+
+### brain.yml
+
+`brain.yml` at the repository root holds the settings of the knowledge folder:
+
+```yaml
+# Brain configuration. Created by brain init.
+# After changing this file run: brain init --update
+# brain init --update rewrites this file - your own comments will be lost.
+path: .
+mode: private
+push_guard: true
+```
+
+| Key | Values | Meaning |
+|---|---|---|
+| `path` | relative path, `.` for the repository root | the knowledge folder |
+| `mode` | `project`, `private` | see [Two modes](#two-modes-project-or-private) |
+| `push_guard` | `true`, `false` – only with `mode: private`; missing means `true` | see [Push guard](#push-guard-private-mode) |
+
+After every change to `brain.yml` run `brain init --update`. It always rewrites `brain.yml` in the current format – values are kept, missing keys are written with their default, **your own comments and formatting in this file are lost**.
 
 ## Features
 
@@ -49,26 +101,40 @@ cd brain
 
 Update: `git pull && ./install.sh` and `claude plugin update brain@brain`.
 
-Projects set up with `brain init` update the plugin automatically (`autoUpdate` on the `brain` marketplace in `.claude/settings.json`). Elsewhere, e.g. for a private brain, enable it once: `/plugin` → Marketplaces tab → `brain` → Enable auto-update (third-party marketplaces are not auto-updated by default). Claude Code checks for updates during a session; the new version loads at the next start. The CLI still needs `git pull` in your brain clone – if plugin and CLI versions differ, the session start prints a warning.
+Repositories set up with `brain init` – project and private – update the plugin automatically (`autoUpdate` on the `brain` marketplace in `.claude/settings.json`). Elsewhere enable it once: `/plugin` → Marketplaces tab → `brain` → Enable auto-update (third-party marketplaces are not auto-updated by default). Claude Code checks for updates during a session; the new version loads at the next start. The CLI still needs `git pull` in your brain clone – if plugin and CLI versions differ, the session start prints a warning.
 
 ## Create a knowledge folder
 
-In a project repository (shared with the team, see [Two modes](#two-modes-project-or-private)):
+Interactively – `brain init` asks for everything it needs:
+
+```bash
+brain init
+# Modus – project (…) oder private (…)? [project/private]   → mode
+# Wissens-Ordner [knowledge]:                              → folder, relative to the repository root
+# Nur lokal – Pushen verhindern? [Y/n]                     → push guard (private only)
+```
+
+Or with flags, without questions:
+
+**Project** – run it inside the project repository:
 
 ```bash
 cd my-project
-brain init knowledge          # brain.yml + knowledge/, plugin enabled for this project
+brain init --project knowledge          # brain.yml + knowledge/, plugin enabled for this project
 git add brain.yml knowledge .claude/settings.json && git commit -m "Add project knowledge"
 ```
 
-Private knowledge (own repository, only for you, never pushed):
+**Private** – in an empty folder; brain creates the Git repository:
 
 ```bash
 mkdir ~/knowledge && cd ~/knowledge
-brain init --private .
+brain init --private .                  # asks about the push guard; add --allow-push to allow a remote
+git add -A && git commit -m "Add private knowledge"
 ```
 
-`brain init` also enables the plugin for the project: it declares the `brain` marketplace and the plugin in `.claude/settings.json` (`extraKnownMarketplaces` with `autoUpdate`, `enabledPlugins`). Team members run `brain setup` once after cloning (see below). If `brain init` printed a `claude plugin …` hint instead, run that command first – `.claude/settings.json` only exists afterwards.
+Without a terminal and without `--project`/`--private`, `brain init` uses project mode. In project mode the knowledge folder must be a subfolder (e.g. `knowledge`), never the repository root itself. `--project` and `--private` together, `--allow-push` without `--private` and a repository with a remote while the push guard is on are refused before anything is written.
+
+What `brain init` does: it writes `brain.yml` at the repository root, creates the knowledge folder (`inbox/`, `archive/`, `wiki/`, `categories.yml` and the files from `template/`), installs the push guard if chosen, sets up the qmd index for your [search level](#search-levels) and enables the plugin for the repository: it declares the `brain` marketplace and the plugin in `.claude/settings.json` (`extraKnownMarketplaces` with `autoUpdate`, `enabledPlugins`). Team members run `brain setup` once after cloning (see below). If `brain init` printed a `claude plugin …` hint instead, run that command first – `.claude/settings.json` only exists afterwards.
 
 `brain init` never commits.
 
@@ -104,7 +170,7 @@ After changing the level run `brain qmd setup` in the repository. Each knowledge
 
 ## What is your knowledge and what can be rebuilt
 
-**Your knowledge lives only in the knowledge folder** – `archive/` (the original notes), `wiki/` (the condensed entries) and `categories.yml` – together with `brain.yml` at the repository root. Commit it and keep the repository backed up (project mode: the project's remote; private mode: no remote by design, so back up the repository yourself). Losing these files means losing knowledge.
+**Your knowledge lives only in the knowledge folder** – `archive/` (the original notes), `wiki/` (the condensed entries) and `categories.yml` – together with `brain.yml` at the repository root. Commit it and keep the repository backed up (project mode: the project's remote; private mode: with the push guard on there is no remote, so back up the repository yourself – or switch the push guard off and push to a remote of your own, see [Push guard](#push-guard-private-mode)). Losing these files means losing knowledge.
 
 Not committed and not rebuildable: notes waiting in `inbox/` exist only on your machine until `/brain:ingest` archives them, and `LOG.md` is a local log of brain operations (history only, no knowledge).
 

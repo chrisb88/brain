@@ -2,8 +2,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { isKnownCategory, UNCATEGORIZED } from './categories.ts';
 import type { BrainMode } from './config.ts';
-import { archiveIntegrityErrors, isGitRepo, uncommittedChanges } from './git.ts';
-import { pushGuardErrors } from './guard.ts';
+import { archiveIntegrityErrors, brainPathInRepo, commitCommand, isGitRepo, shellArg, uncommittedChanges } from './git.ts';
+import { hasPushGuard, pushGuardErrors } from './guard.ts';
 import { qmdCheck } from './qmd.ts';
 import { extractLinks, getRelated, headings, parseOpenPoints, splitFrontmatter } from './markdown.ts';
 import { existsExactCase, hasParentSegment, normalizeId } from './paths.ts';
@@ -160,7 +160,12 @@ function checkOpenPoints(brain: Brain, errors: string[], hints: string[]): void 
     }
 }
 
-export function checkBrain(root: string, mode: BrainMode = 'project', level: SearchLevel = searchLevel()): CheckReport {
+export function checkBrain(
+    root: string,
+    mode: BrainMode = 'project',
+    level: SearchLevel = searchLevel(),
+    pushGuard: boolean = mode === 'private',
+): CheckReport {
     const errors: string[] = [];
     const hints: string[] = [];
     let brain: Brain;
@@ -178,12 +183,16 @@ export function checkBrain(root: string, mode: BrainMode = 'project', level: Sea
     checkOpenPoints(brain, errors, hints);
     if (isGitRepo(root)) {
         errors.push(...archiveIntegrityErrors(root));
-        if (mode === 'private') {
+        if (pushGuard) {
             errors.push(...pushGuardErrors(root));
+        } else if (mode === 'private' && hasPushGuard(root)) {
+            hints.push('Push-Schutz noch installiert, obwohl push_guard: false – brain init --update ausführen');
         }
         const changed = uncommittedChanges(root);
         if (changed.length > 0) {
-            hints.push(`Nicht committete Änderungen im Wissens-Ordner (${changed.length} Datei(en)) – prüfen und committen`);
+            const path = brainPathInRepo(root);
+            hints.push(`Nicht committete Änderungen im Wissens-Ordner (${changed.length} Datei(en)) – prüfen (git status ${shellArg(path)}) `
+                + `und im Repo-Root committen: ${commitCommand([path], 'brain: Wissen aktualisieren')}`);
         }
     } else {
         hints.push('Kein Git-Repository – Archiv-Integrität wurde nicht geprüft.');

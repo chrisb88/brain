@@ -1,18 +1,20 @@
 #!/usr/bin/env -S node --disable-warning=ExperimentalWarning
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { join, relative, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { archiveNote } from './archive.ts';
 import { addCategory, listCategories } from './category.ts';
 import { checkBrain } from './check.ts';
-import { brainConfig, brainStarts, findBrainConfig } from './config.ts';
+import { type BrainMode, brainConfig, brainStarts, CONFIG_FILE, findBrainConfig, rewriteBrainConfig } from './config.ts';
+import { commitCommand } from './git.ts';
+import { hasPushGuard } from './guard.ts';
 import { runIndex } from './indexer.ts';
 import { initBrain, updateBrainConfig } from './init.ts';
 import { linkEntries } from './link.ts';
 import { appendLog, isLogOp } from './log.ts';
-import { callerDir } from './paths.ts';
+import { callerDir, toPosix } from './paths.ts';
 import { activatePlugin, enableAutoUpdate, PLUGIN_INSTALL_COMMAND } from './plugin.ts';
-import { promptLine } from './prompt.ts';
+import { parseMode, parseYesNo, promptLine } from './prompt.ts';
 import { findOrphanIndexes, isQmdInstalled, qmdIndexReady, removeIndex, runQmd, setupQmd } from './qmd.ts';
 import { mergeCategory, moveEntry, renameCategory } from './recategorize.ts';
 import { remember } from './remember.ts';
@@ -25,10 +27,11 @@ const HELP = `brain – command line tool for knowledge folders
 Usage: brain <command> [options]
 
 Knowledge lives in a git repository: brain.yml at the repository root names the knowledge folder
-(path) and the mode (project: shared with the repository; private: never pushed). brain finds
-brain.yml by walking up from the current directory (or set BRAIN_ROOT to the folder containing
-brain.yml). Entries are addressed as wiki/<category>/<entry>, sources as
-archive/<category>/YYYY/MM/<file> (".md" is optional), relative to the knowledge folder.
+(path) and the mode (project: a folder in the project repository, shared with everyone who has
+access to it; private: own repository, by default local only). brain finds brain.yml by walking up
+from the current directory (or set BRAIN_ROOT to the folder containing brain.yml). Entries are
+addressed as wiki/<category>/<entry>, sources as archive/<category>/YYYY/MM/<file> (".md" is
+optional), relative to the knowledge folder.
 
 Environment:
   BRAIN_SEARCH=hybrid|keyword|off
@@ -36,11 +39,14 @@ Environment:
       (qmd BM25 only, no models) or off (INDEX.md and grep, no qmd).
 
 Commands:
-  init [--private] [<path>]
-      Create a knowledge folder in the current git repository: brain.yml at the repository root and the
-      knowledge folder at <path>, relative to the repository root (asked for when missing, default
-      "knowledge"). --private also installs the push guard, requires a repository without remote
-      and creates the repository if needed. Enables the brain plugin for the project
+  init [--project | --private [--allow-push]] [<path>]
+      Create a knowledge folder: brain.yml at the repository root and the knowledge folder at <path>,
+      relative to the repository root (asked for when missing, default "knowledge"). Without
+      --project or --private brain init asks for the mode (without a terminal: project).
+      --project: the current git repository, knowledge is committed and shared with the project.
+      --private: own repository, created if needed; asks whether it stays local only (push guard:
+      no remote allowed, every push rejected; without a terminal: yes). --allow-push skips that
+      question and allows a remote, e.g. for backups. Enables the brain plugin for the project
       (.claude/settings.json). Never commits.
   setup
       Set up a cloned repository on this machine: enable the brain plugin for the project (Claude
@@ -48,8 +54,8 @@ Commands:
       index for the current BRAIN_SEARCH level (hybrid downloads ~2.5 GB of models). Run once per
       clone, then (re)start Claude Code in the repository root.
   init --update
-      Refresh the knowledge folder files from template/ (and the push guard in private mode).
-      Never touches data.
+      Rewrite brain.yml in the current format, refresh the knowledge folder files from template/ and
+      install or remove the push guard according to push_guard. Never touches data.
   archive <inbox-file> --category <slug>
       Move a note from inbox/ to archive/<category>/YYYY/MM/ without changing its
       content. Prints the new archive path.
@@ -110,6 +116,29 @@ function callerPath(path: string): string {
 
 function readStdin(): string {
     return process.stdin.isTTY ? '' : readFileSync(0, 'utf8');
+}
+
+/** Asks until the answer is project or private; no default. */
+function askMode(): BrainMode {
+    for (;;) {
+        const answer = parseMode(promptLine(
+            'Modus – project (Ordner im Projekt-Repository, mit allen geteilt, die Zugriff auf das Repository haben) '
+            + 'oder private (eigenes Repository, nur für dich)? [project/private] ',
+        ));
+        if (answer !== null) {
+            return answer;
+        }
+    }
+}
+
+/** Asks until the answer is yes or no; default yes (push guard on). */
+function askPushGuard(): boolean {
+    for (;;) {
+        const answer = parseYesNo(promptLine('Nur lokal – Pushen verhindern? [Y/n] '), true);
+        if (answer !== null) {
+            return answer;
+        }
+    }
 }
 
 function pruneIndexes(args: string[]): number {
@@ -267,7 +296,7 @@ function run(argv: string[], now: Date): number {
             return 0;
         }
         case 'check': {
-            const report = checkBrain(root, config?.mode);
+            const report = checkBrain(root, config?.mode, searchLevel(), config?.pushGuard);
             if (report.errors.length > 0) {
                 console.log(['Fehler:', ...report.errors.map((error) => `  - ${error}`)].join('\n'));
             }
@@ -345,29 +374,56 @@ function run(argv: string[], now: Date): number {
             const { values, positionals } = parseArgs({
                 args: rest,
                 allowPositionals: true,
-                options: { update: { type: 'boolean', default: false }, private: { type: 'boolean', default: false } },
+                options: {
+                    update: { type: 'boolean', default: false },
+                    private: { type: 'boolean', default: false },
+                    project: { type: 'boolean', default: false },
+                    'allow-push': { type: 'boolean', default: false },
+                },
             });
             if (values.update === true) {
-                if (positionals.length > 0 || values.private === true) {
+                if (positionals.length > 0 || values.private === true || values.project === true || values['allow-push'] === true) {
                     throw new Error('Verwendung: brain init --update');
                 }
                 const current = brainConfig();
-                const changed = updateBrainConfig(current.brainDir, current.mode);
-                console.log(changed.length === 0
-                    ? 'Konfiguration ist aktuell.'
-                    : ['Aktualisiert (bitte prüfen und committen):', ...changed.map((rel) => `  - ${rel}`)].join('\n'));
+                const guardBefore = hasPushGuard(current.brainDir);
+                const changed = [
+                    ...(rewriteBrainConfig(current) ? [CONFIG_FILE] : []),
+                    ...updateBrainConfig(current.brainDir, current.pushGuard)
+                        .map((rel) => (current.path === '.' ? rel : `${current.path}/${rel}`)),
+                ];
+                const guardAfter = hasPushGuard(current.brainDir);
+                const lines = changed.length === 0 ? [] : [
+                    'Aktualisiert (bitte prüfen, Pfade relativ zum Repo-Root):',
+                    ...changed.map((rel) => `  - ${rel}`),
+                    `Im Repo-Root committen: ${commitCommand(changed, 'brain: Konfiguration aktualisieren')}`,
+                ];
+                if (guardBefore !== guardAfter) {
+                    lines.push(guardAfter ? 'Push-Schutz installiert' : 'Push-Schutz entfernt');
+                }
+                console.log(lines.length === 0 ? 'Konfiguration ist aktuell.' : lines.join('\n'));
                 return 0;
             }
             if (positionals.length > 1) {
-                throw new Error('Verwendung: brain init [--private] [<pfad>] | brain init --update');
+                throw new Error('Verwendung: brain init [--project | --private [--allow-push]] [<pfad>] | brain init --update');
+            }
+            if (values.private === true && values.project === true) {
+                throw new Error('--private und --project schließen sich aus');
             }
             const result = initBrain({
                 cwd: callerDir(),
                 path: positionals[0],
-                private: values.private === true,
+                private: values.private === true ? true : values.project === true ? false : undefined,
+                askMode: process.stdin.isTTY === true ? askMode : undefined,
+                allowPush: values['allow-push'] === true,
                 askPath: process.stdin.isTTY === true ? () => promptLine('Wissens-Ordner [knowledge]: ') || 'knowledge' : undefined,
+                askPushGuard: process.stdin.isTTY === true ? askPushGuard : undefined,
             });
-            console.log(`Wissens-Ordner angelegt: ${result.brainDir} (mode: ${result.mode})`);
+            const guard = result.mode === 'private' ? `, push guard: ${result.pushGuard ? 'on' : 'off'}` : '';
+            console.log(`Wissens-Ordner angelegt: ${result.brainDir} (mode: ${result.mode}${guard})`);
+            if (result.mode === 'private' && !result.pushGuard) {
+                console.log('Hinweis: brain prüft nicht, wer das Remote lesen kann – für privates Wissen kein öffentliches Repository verwenden.');
+            }
             if (result.createdRepo) {
                 console.log(`Git-Repository angelegt: ${result.configRoot}`);
             }
@@ -379,7 +435,13 @@ function run(argv: string[], now: Date): number {
             } else {
                 console.log(`Hinweis: Plugin nicht aktiviert – im Repo ausführen: ${PLUGIN_INSTALL_COMMAND}`);
             }
-            console.log('Nächster Schritt: Änderungen prüfen und committen, dann Claude Code im Repo starten.');
+            const relPath = relative(result.configRoot, result.brainDir) || '.';
+            const settings = '.claude/settings.json';
+            const message = 'brain: Wissens-Ordner anlegen';
+            const command = relPath === '.'
+                ? `git add -A && git commit -m "${message}"`
+                : commitCommand([CONFIG_FILE, toPosix(relPath), ...(existsSync(join(result.configRoot, settings)) ? [settings] : [])], message);
+            console.log(`Nächster Schritt: Änderungen prüfen (git status) und im Repo-Root committen: ${command} – dann Claude Code im Repo-Root starten.`);
             console.log('Teammitglieder führen nach dem Klonen einmal „brain setup“ im Repo aus.');
             return 0;
         }

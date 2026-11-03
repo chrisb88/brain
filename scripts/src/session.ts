@@ -18,7 +18,8 @@ export function pluginVersion(pluginRoot: string): string {
 /** Lines the SessionStart hook prints into Claude's context. */
 export function sessionLines(config: BrainConfig, pluginRoot: string, level: SearchLevel, qmdReady: boolean): string[] {
     const folder = config.path === '.' ? './' : `${config.path}/`;
-    const lines = [`Brain: ${folder} (mode: ${config.mode}, search: ${level})`];
+    const guard = config.mode === 'private' ? `, push guard: ${config.pushGuard ? 'on' : 'off'}` : '';
+    const lines = [`Brain: ${folder} (mode: ${config.mode}${guard}, search: ${level})`];
     if (level !== 'off' && !qmdReady) {
         lines.push('Brain: Hinweis – qmd-Index fehlt – einmal „brain setup“ im Repository ausführen');
     }
