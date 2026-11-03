@@ -85,23 +85,62 @@ After every change to `brain.yml` run `brain init --update`. It always rewrites 
 - **Claude Code plugin** – commands, skill, qmd MCP server and a session hook; nothing is copied into your project's own Claude configuration.
 - **Never commits** – you review and commit knowledge changes like code.
 
-## Requirements
+## Installation
 
-- Linux or WSL, Git, Node.js ≥ 24
-- [Claude Code](https://claude.com/claude-code)
-- [qmd](https://github.com/tobi/qmd) (`npm install -g @tobilu/qmd`) – optional with `BRAIN_SEARCH=off`
+brain has two parts that get onto your machine separately:
 
-## Installation (every user)
+- the **`brain` CLI** – runs from your clone of this repository (`npm link`); you update it with `git pull`.
+- the **Claude Code plugin** (`brain@brain`: commands, skill, session hook, qmd MCP server) – Claude Code installs it from the `brain` marketplace and updates it automatically.
+
+The plugin calls the CLI, so you always need both. Adding the marketplace alone is not enough – the session start then reports that the CLI is missing.
+
+### 1. Requirements
+
+| Needed | Check | Install |
+|---|---|---|
+| Linux or WSL | – | – |
+| Git | `git --version` | your package manager |
+| Node.js ≥ 24 | `node --version` | e.g. [nvm](https://github.com/nvm-sh/nvm): `nvm install 24` |
+| [Claude Code](https://claude.com/claude-code) | `claude --version` | see the Claude Code docs |
+| [qmd](https://github.com/tobi/qmd) – optional | `qmd --version` | `npm install -g @tobilu/qmd` |
+
+Without qmd, set `export BRAIN_SEARCH=off` (e.g. in `~/.zshrc`); brain then searches with `INDEX.md` and grep, see [Search levels](#search-levels).
+
+### 2. Clone and install – once per machine
 
 ```bash
-git clone git@github.com:chrisb88/brain.git
-cd brain
-./install.sh        # brain CLI on your PATH, plugin marketplace registered in Claude Code
+git clone https://github.com/chrisb88/brain.git ~/brain
+cd ~/brain
+./install.sh
 ```
 
-Update: `git pull && ./install.sh` and `claude plugin update brain@brain`.
+Keep the clone – the CLI runs from it. `install.sh`:
 
-Repositories set up with `brain init` – project and private – update the plugin automatically (`autoUpdate` on the `brain` marketplace in `.claude/settings.json`). Elsewhere enable it once: `/plugin` → Marketplaces tab → `brain` → Enable auto-update (third-party marketplaces are not auto-updated by default). Claude Code checks for updates during a session; the new version loads at the next start. The CLI still needs `git pull` in your brain clone – if plugin and CLI versions differ, the session start prints a warning.
+1. checks Git and Node.js ≥ 24 and stops with an error if one is missing,
+2. installs the CLI's dependencies (`npm --prefix scripts install`) and puts `brain` on your PATH (`npm link`, pointing to this clone),
+3. registers the `brain` marketplace in Claude Code for your user (`claude plugin marketplace add chrisb88/brain`) – if `claude` is not found it prints the command to run later,
+4. prints `Hinweis: qmd fehlt – npm install -g @tobilu/qmd (oder ohne qmd: export BRAIN_SEARCH=off)` if qmd is missing,
+5. ends with `Fertig: brain <version>`.
+
+### 3. Check
+
+```bash
+brain --version     # e.g. 0.4.1
+```
+
+`brain: command not found` means npm's global bin folder is not on your PATH – check with `npm prefix -g` and add `<prefix>/bin` to your PATH.
+
+### 4. Next step
+
+- **Your own knowledge** (new project brain or private brain): [Create a knowledge folder](#create-a-knowledge-folder) – `brain init` also enables the plugin for that repository.
+- **A project that already has a brain** (team member): [Team members](#team-members-after-cloning) – `brain setup` in your clone of the project.
+
+### Update
+
+- **Plugin:** automatic. Repositories set up with `brain init` – project and private – declare `autoUpdate` for the `brain` marketplace in `.claude/settings.json`. Elsewhere enable it once: `/plugin` → Marketplaces tab → `brain` → Enable auto-update (third-party marketplaces are not auto-updated by default), or update by hand with `claude plugin update brain@brain`. Claude Code checks for updates during a session; the new version loads at the next start.
+- **CLI:** by hand – `cd ~/brain && git pull && ./install.sh`.
+
+If plugin and CLI versions differ, the session start prints a warning – then update the part that is behind.
 
 ## Create a knowledge folder
 
@@ -141,7 +180,7 @@ What `brain init` does: it writes `brain.yml` at the repository root, creates th
 ### Team members (after cloning)
 
 ```bash
-./install.sh        # once per machine, from your brain clone
+# once per machine: Installation steps 1–3 (clone brain, ./install.sh)
 cd my-project
 brain setup         # once per clone
 ```

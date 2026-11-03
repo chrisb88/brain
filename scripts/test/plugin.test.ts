@@ -8,7 +8,7 @@ import { cliVersion } from '../src/version.ts';
 const repo = join(import.meta.dirname, '..', '..');
 const json = (rel: string): Record<string, unknown> => JSON.parse(readFileSync(join(repo, rel), 'utf8')) as Record<string, unknown>;
 const text = (rel: string): string => readFileSync(join(repo, rel), 'utf8');
-const MISSING_CLI = 'Brain: CLI brain fehlt – einmal ./install.sh aus dem brain-Klon ausführen';
+const MISSING_CLI = 'Brain: CLI brain fehlt – installieren: git clone https://github.com/chrisb88/brain.git && cd brain && ./install.sh (Anleitung: https://github.com/chrisb88/brain#installation)';
 const MISSING_CLI_JSON = JSON.stringify({ systemMessage: MISSING_CLI, hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: MISSING_CLI } });
 const HOOK_COMMAND = `if command -v brain >/dev/null 2>&1; then brain session-start "\${CLAUDE_PLUGIN_ROOT}"; else echo '${MISSING_CLI_JSON}'; fi`;
 
