@@ -12,7 +12,7 @@ Based on the approach by [The Node AI](https://www.youtube.com/watch?v=mHSOsy_us
 
 ## How it works
 
-At its core brain is an ordinary **second brain** in the style of the *LLM wiki* idea described by Andrej Karpathy: a folder of Markdown pages that an LLM writes and maintains for you. Instead of searching your raw notes again for every question, Claude reads each new note **once**, works it into a small set of condensed, cross-linked wiki pages and keeps them up to date. Knowledge accumulates in the wiki; questions are answered from the wiki.
+At its core brain is an ordinary **second brain** in the style of the [LLM wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) idea described by Andrej Karpathy: a folder of Markdown pages that an LLM writes and maintains for you. Instead of searching your raw notes again for every question, Claude reads each new note **once**, works it into a small set of condensed, cross-linked wiki pages and keeps them up to date. Knowledge accumulates in the wiki; questions are answered from the wiki.
 
 ```
 inbox/  ──/brain:ingest──▶  archive/   original notes, unchanged (the sources)
@@ -369,7 +369,7 @@ It removes the `brain` CLI and – after confirmation – the qmd indexes of all
 
 ## Credits
 
-This project is based on the second brain approach presented by [The Node AI](https://www.youtube.com/@TheNodeAI) in the video [„Der echte Weg zum Second Brain: Ohne Programmieren. Vergiss Obsidian."](https://www.youtube.com/watch?v=mHSOsy_usAg) (German), and on the *LLM wiki* idea by Andrej Karpathy – an LLM that maintains a Markdown wiki instead of searching raw documents for every question. Thanks for the inspiration!
+This project is based on the second brain approach presented by [The Node AI](https://www.youtube.com/@TheNodeAI) in the video [„Der echte Weg zum Second Brain: Ohne Programmieren. Vergiss Obsidian."](https://www.youtube.com/watch?v=mHSOsy_usAg) (German), and on the [LLM wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) idea by Andrej Karpathy – an LLM that maintains a Markdown wiki instead of searching raw documents for every question. Thanks for the inspiration!
 
 ## License
 
