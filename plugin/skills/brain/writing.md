@@ -13,11 +13,13 @@ Gilt für jede Datei in `wiki/<kategorie>/` des Wissens-Ordners.
 
 Ein Eintrag beschreibt, wie etwas jetzt ist und warum. Er ist kein Bericht über einen Vorgang.
 
-- Nicht hinein gehören: die Erzählung eines Vorgangs (wer wann was getan hat), Zeitmarker wie „damals“, „jetzt“, „inzwischen“, „neu“, einmalige Ausführungspläne und konkrete Momentaufnahmen (Anzahlen, Versionen, Messwerte, Stichtagswerte).
+- Nicht hinein gehören: die Erzählung eines Vorgangs (wer wann was getan hat), Zeitmarker wie „damals“, „jetzt“, „inzwischen“, „neu“, einmalige Ausführungspläne und kurzlebige Momentaufnahmen (aktuelle Versionsnummer, Anzahl der Unit-Tests, Stichtagswerte).
+- Zahlen im Einzelfall prüfen: Veraltet der Wert bald von selbst, bleibt er draußen. Ist er ein dauerhafter Fakt („benötigt PHP 8.3“, „Rate-Limit 100 req/s“), bleibt er drin.
 - Was aus einem Vorgang bleibt, sind die Erkenntnisse: die Entscheidung, ihre Begründung, Fallstricke, Verhalten, Zusammenhänge. Sie werden als Zustand formuliert („X funktioniert so, weil Y“), nicht als Geschehen („wir haben X umgestellt“).
-- Ist eine Zeitangabe selbst der Inhalt (Frist, Stichtag, Gültigkeit), steht sie als datierter Fakt („gilt bis 2026-12-31“), nicht relativ. Einen festen Marker gibt es nicht.
-- Berichtsförmige Notiz (Ticket-Bericht, Protokoll, Tagebuch, Notiz, Konzept): nicht übernehmen, sondern umschreiben. Das Original bleibt in `archive/`.
-- Neue Information ersetzt die betroffene Stelle. Sie wird nicht daneben gestellt und nicht als Korrektur markiert.
+- Auch ein Vorhaben ist ein Zustand: „X soll eingeführt werden, weil Y“. Ändert sich der Stand, ersetzt er diese Aussage: „X ist eingeführt“ oder „X wird nicht eingeführt, weil Z“. Ein Vorhaben nie so formulieren, als wäre es schon umgesetzt.
+- Ist eine Zeitangabe selbst der Inhalt (Frist, Stichtag, Gültigkeit), steht sie als datierter Fakt („gilt bis 2026-12-31“), nicht relativ.
+- Berichtsförmige Notiz (Ticket-Bericht, Protokoll, Tagebuch, Konzept): nicht übernehmen, sondern umschreiben. Das Original bleibt in `archive/`.
+- Neue Information ersetzt die betroffene Stelle. Sie wird nicht daneben gestellt und nicht als Korrektur markiert. Ist nicht offensichtlich, was stimmt, entscheidet der Nutzer (siehe „Widersprüche und Unklarheiten“).
 - Keine feste Gliederung. Überschriften nur, wo sie dem Leser helfen.
 
 ## Verdichten statt anhängen

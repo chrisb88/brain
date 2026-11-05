@@ -27,12 +27,12 @@ Ist `$ARGUMENTS` nicht leer: zuerst wörtlich als `inbox/chat-note.md` speichern
    - bestehendes Thema → Eintrag verdichtend bearbeiten, Quelle ergänzen, dann `brain log update …`
    - neues Thema → `brain remember --category … --title "…" --summary "…" --source <archivpfad> [--related …] <<'EOF'` … `EOF`
    - Beziehungen → `brain link …`
-6. Widersprüche oder Unklarheiten → Nutzer fragen; ungeklärt → Callouts in allen betroffenen Einträgen und `brain log conflict …`. Der Ingest vergleicht nur gegen das Wiki: Widersprüche zu Wissen außerhalb (Projektdateien, Doku) selbst prüfen und dem Nutzer vorlegen, nicht selbst einordnen.
+6. Widersprüche oder Unklarheiten → Nutzer fragen; ungeklärt → Callouts in allen betroffenen Einträgen und `brain log conflict …`. Ist nicht offensichtlich, was stimmt, immer den Nutzer fragen. Zusätzlich die Dokumente zum Thema außerhalb des Wissens-Ordners (z. B. Projektdokumentation) lesen und mit der Notiz abgleichen, falls es welche gibt; Widersprüche und Unklarheiten dem Nutzer vorlegen.
 7. Geheimnisse → nicht übernehmen, Nutzer informieren.
 
 ## 3. Abschluss
 
-1. Selbst-Review (Claude, ohne den Nutzer einzubinden): Jeden neuen oder geänderten Eintrag noch einmal lesen. Keine Erzählung, keine Zeitmarker, keine aktuellen Zahlen? Keine Information aus der Notiz verloren, keine Altfassung stehen geblieben? Widersprüche dem Nutzer vorgelegt statt selbst eingeordnet? Bei Verstößen korrigieren.
+1. Selbst-Review (Claude, ohne den Nutzer einzubinden): Jeden neuen oder geänderten Eintrag noch einmal lesen. Keine Erzählung, keine Zeitmarker, keine kurzlebigen Zahlen? Vorhaben als Vorhaben formuliert? Keine relevante Information aus der Notiz verloren, auch keine dauerhaften Fakten, keine Altfassung stehen geblieben? Nicht Offensichtliches dem Nutzer vorgelegt statt selbst entschieden? Bei Verstößen korrigieren.
 2. `brain index`
 3. `brain check` – Fehler, die in diesem Lauf entstanden sind, beheben. Sonst abbrechen und den Bericht zeigen.
 4. `brain refresh` – Suchindex gemäß Suchstufe aktualisieren (`hybrid`: update + embed, `keyword`: update, `off`: nichts).
