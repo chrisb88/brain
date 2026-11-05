@@ -210,6 +210,7 @@ brain --version
 
 - **Plugin:** automatic. Repositories set up with `brain init` – project and private – declare `autoUpdate` for the `brain` marketplace in `.claude/settings.json`. Elsewhere enable it once: `/plugin` → Marketplaces tab → `brain` → Enable auto-update (third-party marketplaces are not auto-updated by default), or update by hand with `claude plugin update brain@brain`. Claude Code checks for updates during a session; the new version loads at the next start.
 - **CLI:** by hand – `cd ~/brain && git pull && ./install.sh`.
+- **Knowledge folder:** by hand, in each repository – `brain init --update`, then commit. It refreshes `CLAUDE.md`, `.gitignore` and `.gitattributes` from `template/` and rewrites `brain.yml`; your own additions to these files are lost. It is needed when `template/` changed, which `brain check` reports as a hint. New rules in the plugin arrive without it.
 
 If plugin and CLI versions differ, the session start prints a warning – then update the part that is behind.
 
