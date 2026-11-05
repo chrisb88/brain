@@ -36,7 +36,7 @@ Ist `$ARGUMENTS` nicht leer: zuerst wörtlich als `inbox/chat-note.md` speichern
 2. `brain index`
 3. `brain check` – Fehler, die in diesem Lauf entstanden sind, beheben. Sonst abbrechen und den Bericht zeigen.
 4. `brain refresh` – Suchindex gemäß Suchstufe aktualisieren (`hybrid`: update + embed, `keyword`: update, `off`: nichts).
-5. Zusammenfassung für den Nutzer: pro Notiz, was bewusst nicht übernommen wurde, und nur wenn Verwandtes gefunden wurde, eine Zeile „Verwandt: …“; neue Einträge, geänderte Einträge, neue Verknüpfungen; Ergebnis des Selbst-Reviews (was korrigiert wurde oder „keine Korrekturen“); Hinweise aus `brain check` (offene Punkte, Einträge ohne Kategorie).
+5. Zusammenfassung für den Nutzer: pro Notiz, nur wenn zutreffend: was bewusst nicht übernommen wurde und eine Zeile „Verwandt: …“; neue Einträge, geänderte Einträge, neue Verknüpfungen; Ergebnis des Selbst-Reviews (was korrigiert wurde oder „keine Korrekturen“); Hinweise aus `brain check` (offene Punkte, Einträge ohne Kategorie).
 6. `brain log ingest "<n> Notizen" "<Kategorien>"`
 7. Nicht committen. Dem Nutzer sagen: „Änderungen im Wissens-Ordner prüfen und committen“ und als Vorschlag ausgeben: `git add <Wissens-Ordner> && git commit -m "ingest: <n> Notizen – <Themen>"`. Nie pushen.
 
