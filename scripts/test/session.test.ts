@@ -37,7 +37,7 @@ test('brain --version prints the CLI version', () => {
     const result = runCli(emptyDir(), ['--version'], '', emptyDir(), { BRAIN_ROOT: '' });
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.stdout, `${cliVersion()}\n`);
-    assert.equal(cliVersion(), '0.5.0');
+    assert.equal(cliVersion(), '0.5.1');
 });
 
 test('session-start without a knowledge folder prints nothing', () => {
@@ -65,7 +65,7 @@ test('sessionLines shows the push guard in private mode', () => {
 const warnings: Array<[string, string | null, Record<string, string>, RegExp]> = [
     ['version mismatch', '0.0.1', {}, /Warnung: Plugin 0\.0\.1 und CLI \d+\.\d+\.\d+ passen nicht zusammen/],
     ['broken plugin.json', null, {}, /Warnung: Plugin-Version nicht lesbar/],
-    ['invalid BRAIN_SEARCH', '0.5.0', { BRAIN_SEARCH: 'fast' }, /Brain: Hinweis – BRAIN_SEARCH=fast ist ungültig/],
+    ['invalid BRAIN_SEARCH', '0.5.1', { BRAIN_SEARCH: 'fast' }, /Brain: Hinweis – BRAIN_SEARCH=fast ist ungültig/],
 ];
 for (const [label, version, env, expected] of warnings) {
     test(`session-start warns on ${label} and still exits 0`, () => {
