@@ -37,7 +37,8 @@ Ein Eintrag beschreibt, wie etwas jetzt ist und warum. Er ist kein Bericht über
       > Affects: [[wiki/a/x]], [[wiki/b/y]]
       > <deutsche Beschreibung mit Quellenlinks>
 
-  Für Unklarheiten `> [!question] Unclear Q-YYYYMMDD-N`. N zählt pro Tag hoch; vorher prüfen, dass die ID frei ist: `cd <Wissens-Ordner> && grep -rn "C-YYYYMMDD-" wiki/`.
+  Für Unklarheiten `> [!question] Unclear Q-YYYYMMDD-N`. N zählt pro Tag hoch; vorher prüfen, dass die ID frei ist: `cd <Wissens-Ordner> && grep -rnE "[CQ]-YYYYMMDD-" wiki/`.
+- Conflict: Zwei Aussagen können nicht beide stimmen (das Wiki sagt „x läuft mit PHP 8.3“, eine neue Notiz „x läuft mit PHP 8.2“). Unclear: Eine Information fehlt, oder es ist offen, ob sich die Aussagen überhaupt widersprechen (eine Notiz sagt „x benötigt PHP 8.3“, die Doku „das Gesamtsystem läuft auf PHP 8.2“).
 - Auflösen: Inhalt korrigieren und den Callout mit dieser ID aus ALLEN betroffenen Einträgen entfernen.
 - `brain check` erzwingt die Konsistenz.
 
