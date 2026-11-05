@@ -4,6 +4,7 @@ import { isKnownCategory, UNCATEGORIZED } from './categories.ts';
 import type { BrainMode } from './config.ts';
 import { archiveIntegrityErrors, brainPathInRepo, commitCommand, isGitRepo, shellArg, uncommittedChanges } from './git.ts';
 import { hasPushGuard, pushGuardErrors } from './guard.ts';
+import { outdatedTemplateFiles } from './init.ts';
 import { qmdCheck } from './qmd.ts';
 import { extractLinks, getRelated, headings, parseOpenPoints, splitFrontmatter } from './markdown.ts';
 import { existsExactCase, hasParentSegment, normalizeId } from './paths.ts';
@@ -196,6 +197,10 @@ export function checkBrain(
         }
     } else {
         hints.push('Kein Git-Repository – Archiv-Integrität wurde nicht geprüft.');
+    }
+    const outdated = outdatedTemplateFiles(root);
+    if (outdated.length > 0) {
+        hints.push(`Vorlagen veraltet (${outdated.join(', ')}) – brain init --update ausführen und committen; eigene Ergänzungen in diesen Dateien gehen dabei verloren`);
     }
     for (const entry of brain.entries) {
         if (entry.category === UNCATEGORIZED) {

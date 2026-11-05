@@ -65,17 +65,26 @@ function gitOutput(dir: string, args: string[]): string | null {
     }
 }
 
+/** Lists template files that are missing or differ in the knowledge folder, as [source path, target path]. */
+function staleTemplateFiles(brainDir: string, templateDir: string): Array<[string, string]> {
+    return templateFiles(templateDir).filter(([source, targetRel]) => {
+        const file = join(brainDir, targetRel);
+        return !existsSync(file) || !readFileSync(file).equals(readFileSync(join(templateDir, source)));
+    });
+}
+
+/** Paths relative to the knowledge folder that brain init --update would rewrite from the template. */
+export function outdatedTemplateFiles(brainDir: string, templateDir = TEMPLATE_DIR): string[] {
+    return staleTemplateFiles(brainDir, templateDir).map(([, targetRel]) => targetRel);
+}
+
 /** Copies changed template files into the knowledge folder, installs or removes the push guard; returns changed paths. */
 export function updateBrainConfig(brainDir: string, pushGuard: boolean, templateDir = TEMPLATE_DIR): string[] {
     const changed: string[] = [];
-    for (const [source, targetRel] of templateFiles(templateDir)) {
-        const content = readFileSync(join(templateDir, source));
+    for (const [source, targetRel] of staleTemplateFiles(brainDir, templateDir)) {
         const file = join(brainDir, targetRel);
-        if (existsSync(file) && readFileSync(file).equals(content)) {
-            continue;
-        }
         mkdirSync(dirname(file), { recursive: true });
-        writeFileSync(file, content);
+        writeFileSync(file, readFileSync(join(templateDir, source)));
         changed.push(targetRel);
     }
     if (pushGuard) {

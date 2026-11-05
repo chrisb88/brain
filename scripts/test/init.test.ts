@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -193,6 +193,27 @@ test('updateBrainConfig only touches template files, never data', () => {
     }
     assert.equal(hooksPath(repo), '');
 });
+
+const templateHint = /Vorlagen veraltet/;
+
+const outdatedTemplates: Array<[string, (dir: string) => void, string]> = [
+    ['changed file', (dir) => writeFile(dir, 'CLAUDE.md', '# old\n'), 'CLAUDE.md'],
+    ['missing file', (dir) => rmSync(join(dir, '.gitattributes')), '.gitattributes'],
+];
+for (const [label, change, file] of outdatedTemplates) {
+    test(`check hints at an outdated template (${label}) until brain init --update ran`, () => {
+        const { brainDir } = initBrain({ cwd: emptyDir(), path: '.', private: true, allowPush: true });
+        assert.doesNotMatch(checkBrain(brainDir, 'private', 'off', false).hints.join('\n'), templateHint);
+
+        change(brainDir);
+        const report = checkBrain(brainDir, 'private', 'off', false);
+        assert.deepEqual(report.errors, []);
+        assert.ok(report.hints.includes(`Vorlagen veraltet (${file}) – brain init --update ausführen und committen; eigene Ergänzungen in diesen Dateien gehen dabei verloren`));
+
+        updateBrainConfig(brainDir, false);
+        assert.doesNotMatch(checkBrain(brainDir, 'private', 'off', false).hints.join('\n'), templateHint);
+    });
+}
 
 test('updateBrainConfig reinstalls a removed push guard in private mode', () => {
     const dir = emptyDir();

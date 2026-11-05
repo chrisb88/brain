@@ -87,7 +87,8 @@ Commands:
       update the qmd index (hybrid also embeds new entries). Runs at every session start as well.
   check
       Validate the knowledge folder. Errors exit with 1; hints list open conflicts/unclear
-      points, uncategorized entries, uncommitted changes and qmd index problems.
+      points, uncategorized entries, uncommitted changes, outdated template files and qmd index
+      problems.
   log <op> <target> [<description>]
       Append a line to LOG.md. Ops: archive, create, update, link, unlink,
       conflict, resolve, recategorize, category, ingest.
