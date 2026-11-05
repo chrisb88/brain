@@ -201,7 +201,7 @@ Keep the clone – the CLI runs from it. `install.sh`:
 ### 3. Check
 
 ```bash
-brain --version     # e.g. 0.5.0
+brain --version     # e.g. 0.5.1
 ```
 
 `brain: command not found` means npm's global bin folder is not on your PATH – check with `npm prefix -g` and add `<prefix>/bin` to your PATH.

@@ -9,6 +9,17 @@ Gilt für jede Datei in `wiki/<kategorie>/` des Wissens-Ordners.
 - Nach jedem neuen oder geänderten Eintrag verwandte Einträge suchen (Suchleiter im Skill, Schritt 1–2, gemäß Suchstufe) und verknüpfen – auch kategorieübergreifend.
 - Genau eine Kategorie pro Eintrag; bei Unklarheit gewinnt das Hauptthema, der Rest wird verlinkt.
 
+## Ist-Zustand, keine Historie
+
+Ein Eintrag beschreibt, wie etwas jetzt ist und warum. Er ist kein Bericht über einen Vorgang.
+
+- Nicht hinein gehören: die Erzählung eines Vorgangs (wer wann was getan hat), Zeitmarker wie „damals“, „jetzt“, „inzwischen“, „neu“, einmalige Ausführungspläne und konkrete Momentaufnahmen (Anzahlen, Versionen, Messwerte, Stichtagswerte).
+- Was aus einem Vorgang bleibt, sind die Erkenntnisse: die Entscheidung, ihre Begründung, Fallstricke, Verhalten, Zusammenhänge. Sie werden als Zustand formuliert („X funktioniert so, weil Y“), nicht als Geschehen („wir haben X umgestellt“).
+- Ist eine Zeitangabe selbst der Inhalt (Frist, Stichtag, Gültigkeit), steht sie als datierter Fakt („gilt bis 2026-12-31“), nicht relativ. Einen festen Marker gibt es nicht.
+- Berichtsförmige Notiz (Ticket-Bericht, Protokoll, Tagebuch, Notiz, Konzept): nicht übernehmen, sondern umschreiben. Das Original bleibt in `archive/`.
+- Neue Information ersetzt die betroffene Stelle. Sie wird nicht daneben gestellt und nicht als Korrektur markiert.
+- Keine feste Gliederung. Überschriften nur, wo sie dem Leser helfen.
+
 ## Verdichten statt anhängen
 
 - Neues in den bestehenden Text einarbeiten, Doppeltes zusammenführen, Veraltetes ersetzen (die alte Quelle bleibt in `sources`).
