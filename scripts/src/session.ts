@@ -19,7 +19,8 @@ export function pluginVersion(pluginRoot: string): string {
 export function sessionLines(config: BrainConfig, pluginRoot: string, level: SearchLevel, qmdReady: boolean): string[] {
     const folder = config.path === '.' ? './' : `${config.path}/`;
     const guard = config.mode === 'private' ? `, push guard: ${config.pushGuard ? 'on' : 'off'}` : '';
-    const lines = [`Brain: ${folder} (mode: ${config.mode}${guard}, search: ${level})`];
+    const inbox = config.inbox === 'committed' ? ', inbox: committed' : '';
+    const lines = [`Brain: ${folder} (mode: ${config.mode}${guard}${inbox}, search: ${level})`];
     if (level !== 'off' && !qmdReady) {
         lines.push('Brain: Hinweis – qmd-Index fehlt – einmal „brain setup“ im Repository ausführen');
     }

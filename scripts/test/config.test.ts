@@ -7,13 +7,13 @@ import { CATEGORIES, emptyDir, makeBrain, projectWithBrain, read, runCli, writeF
 
 test('loadBrainConfig reads path and mode', () => {
     const { repo, brain } = projectWithBrain();
-    assert.deepEqual(loadBrainConfig(repo), { configRoot: repo, brainDir: brain, path: 'knowledge', mode: 'project', pushGuard: false });
+    assert.deepEqual(loadBrainConfig(repo), { configRoot: repo, brainDir: brain, path: 'knowledge', mode: 'project', pushGuard: false, inbox: 'local' });
 });
 
 test('loadBrainConfig accepts "." and round-trips formatBrainConfig', () => {
     const dir = emptyDir();
     writeFile(dir, 'brain.yml', formatBrainConfig('docs/Mein Wissen', 'private'));
-    assert.deepEqual(loadBrainConfig(dir), { configRoot: dir, brainDir: join(dir, 'docs', 'Mein Wissen'), path: 'docs/Mein Wissen', mode: 'private', pushGuard: true });
+    assert.deepEqual(loadBrainConfig(dir), { configRoot: dir, brainDir: join(dir, 'docs', 'Mein Wissen'), path: 'docs/Mein Wissen', mode: 'private', pushGuard: true, inbox: 'local' });
     writeFile(dir, 'brain.yml', formatBrainConfig('.', 'project'));
     assert.equal(loadBrainConfig(dir).brainDir, dir);
 });
@@ -29,6 +29,12 @@ const invalid: Array<[string, string, RegExp]> = [
     ['push_guard not boolean (no)', 'path: .\nmode: private\npush_guard: no\n', /push_guard muss true oder false sein/],
     ['push_guard not boolean (string)', 'path: .\nmode: private\npush_guard: "false"\n', /push_guard muss true oder false sein/],
     ['push_guard not boolean (0)', 'path: .\nmode: private\npush_guard: 0\n', /push_guard muss true oder false sein/],
+    ['inbox committed in private mode', 'path: .\nmode: private\ninbox: committed\n', /inbox nur bei mode: project/],
+    ['inbox local in private mode', 'path: .\nmode: private\ninbox: local\n', /inbox nur bei mode: project/],
+    ['inbox wrong case', 'path: knowledge\nmode: project\ninbox: Committed\n', /inbox muss local oder committed sein/],
+    ['inbox boolean', 'path: knowledge\nmode: project\ninbox: true\n', /inbox muss local oder committed sein/],
+    ['inbox number', 'path: knowledge\nmode: project\ninbox: 1\n', /inbox muss local oder committed sein/],
+    ['inbox empty', 'path: knowledge\nmode: project\ninbox:\n', /inbox muss local oder committed sein/],
 ];
 for (const [label, content, error] of invalid) {
     test(`loadBrainConfig rejects: ${label}`, () => {
@@ -101,4 +107,33 @@ test('cli without a knowledge folder fails clearly, help still works', () => {
 test('makeBrain brains work with BRAIN_ROOT', () => {
     const root = makeBrain({ 'categories.yml': CATEGORIES });
     assert.equal(runCli(root, ['category', 'list']).status, 0);
+});
+
+test('loadBrainConfig reads inbox and defaults to local', () => {
+    const dir = emptyDir();
+    writeFile(dir, 'brain.yml', 'path: knowledge\nmode: project\ninbox: committed\n');
+    assert.equal(loadBrainConfig(dir).inbox, 'committed');
+    writeFile(dir, 'brain.yml', 'path: knowledge\nmode: project\ninbox: local\n');
+    assert.equal(loadBrainConfig(dir).inbox, 'local');
+    writeFile(dir, 'brain.yml', 'path: knowledge\nmode: project\n');
+    assert.equal(loadBrainConfig(dir).inbox, 'local');
+    writeFile(dir, 'brain.yml', 'path: .\nmode: private\n');
+    assert.equal(loadBrainConfig(dir).inbox, 'local');
+});
+
+test('formatBrainConfig writes inbox only when committed', () => {
+    const header = '# Brain configuration. Created by brain init.\n# After changing this file run: brain init --update\n'
+        + '# brain init --update rewrites this file - your own comments will be lost.\n';
+    assert.equal(formatBrainConfig('knowledge', 'project', false, 'committed'), `${header}path: knowledge\nmode: project\ninbox: committed\n`);
+    assert.equal(formatBrainConfig('knowledge', 'project', false, 'local'), `${header}path: knowledge\nmode: project\n`);
+    assert.equal(formatBrainConfig('.', 'private', true, 'local'), `${header}path: .\nmode: private\npush_guard: true\n`);
+});
+
+test('rewriteBrainConfig keeps inbox: committed', () => {
+    const dir = emptyDir();
+    writeFile(dir, 'brain.yml', 'path: knowledge\nmode: project\ninbox: committed\n');
+    assert.equal(rewriteBrainConfig(loadBrainConfig(dir)), true);
+    assert.match(read(dir, 'brain.yml'), /\ninbox: committed\n$/);
+    assert.equal(rewriteBrainConfig(loadBrainConfig(dir)), false);
+    assert.equal(loadBrainConfig(dir).inbox, 'committed');
 });

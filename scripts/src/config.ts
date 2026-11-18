@@ -6,6 +6,8 @@ import { callerDir, relativeInside } from './paths.ts';
 export const CONFIG_FILE = 'brain.yml';
 export const BRAIN_MODES = ['project', 'private'] as const;
 export type BrainMode = (typeof BRAIN_MODES)[number];
+export const BRAIN_INBOX_MODES = ['local', 'committed'] as const;
+export type BrainInbox = (typeof BRAIN_INBOX_MODES)[number];
 
 export interface BrainConfig {
     /** Directory that contains brain.yml (root of the knowledge repository). */
@@ -17,9 +19,11 @@ export interface BrainConfig {
     mode: BrainMode;
     /** Push guard (no remote, every push rejected); only in private mode, default true. */
     pushGuard: boolean;
+    /** Inbox in Git ("committed") or only on this machine ("local", default); "committed" only in project mode. */
+    inbox: BrainInbox;
 }
 
-const KEYS = ['path', 'mode', 'push_guard'];
+const KEYS = ['path', 'mode', 'push_guard', 'inbox'];
 
 const HEADER = [
     '# Brain configuration. Created by brain init.',
@@ -63,24 +67,40 @@ export function loadBrainConfig(configRoot: string): BrainConfig {
             throw new Error(`${file}: push_guard muss true oder false sein`);
         }
     }
+    if (record.inbox !== undefined) {
+        if (typeof record.inbox !== 'string' || !(BRAIN_INBOX_MODES as readonly string[]).includes(record.inbox)) {
+            throw new Error(`${file}: inbox muss local oder committed sein`);
+        }
+        if (record.mode !== 'project') {
+            throw new Error(`${file}: inbox nur bei mode: project`);
+        }
+    }
+    const inbox: BrainInbox = record.inbox === 'committed' ? 'committed' : 'local';
     const pushGuard = record.mode === 'private' && record.push_guard !== false;
     const brainDir = resolve(root, record.path);
     const path = brainDir === root ? '.' : relativeInside(root, brainDir);
     if (path === null) {
         throw new Error(`${file}: path „${record.path}“ liegt außerhalb von ${root}`);
     }
-    return { configRoot: root, brainDir, path, mode: record.mode, pushGuard };
+    return { configRoot: root, brainDir, path, mode: record.mode, pushGuard, inbox };
 }
 
-export function formatBrainConfig(path: string, mode: BrainMode, pushGuard: boolean = mode === 'private'): string {
-    const data = mode === 'private' ? { path, mode, push_guard: pushGuard } : { path, mode };
+export function formatBrainConfig(
+    path: string,
+    mode: BrainMode,
+    pushGuard: boolean = mode === 'private',
+    inbox: BrainInbox = 'local',
+): string {
+    const data = mode === 'private'
+        ? { path, mode, push_guard: pushGuard }
+        : inbox === 'committed' ? { path, mode, inbox } : { path, mode };
     return `${HEADER}\n${stringify(data)}`;
 }
 
 /** Writes brain.yml in the current format; returns true when the file changed. */
 export function rewriteBrainConfig(config: BrainConfig): boolean {
     const file = join(config.configRoot, CONFIG_FILE);
-    const content = formatBrainConfig(config.path, config.mode, config.pushGuard);
+    const content = formatBrainConfig(config.path, config.mode, config.pushGuard, config.inbox);
     if (readFileSync(file, 'utf8') === content) {
         return false;
     }

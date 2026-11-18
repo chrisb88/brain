@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { saveCategories } from './categories.ts';
-import { CONFIG_FILE, type BrainMode, formatBrainConfig } from './config.ts';
+import { type BrainInbox, CONFIG_FILE, type BrainMode, formatBrainConfig } from './config.ts';
 import { installPushGuard, removePushGuard } from './guard.ts';
 import { runIndex } from './indexer.ts';
 import { relativeInside } from './paths.ts';
@@ -11,6 +11,8 @@ import { relativeInside } from './paths.ts';
 export const CODE_ROOT = resolve(import.meta.dirname, '..', '..');
 
 export const TEMPLATE_DIR = join(CODE_ROOT, 'template');
+
+const VARIANT_SUFFIX = '.committed';
 
 const RENAMES: Record<string, string> = { _gitignore: '.gitignore', _gitattributes: '.gitattributes' };
 
@@ -43,16 +45,27 @@ export interface InitResult {
     createdRepo: boolean;
 }
 
-/** Lists template files as [source path relative to template, target path relative to the knowledge folder]. */
-function templateFiles(templateDir: string, prefix = ''): Array<[string, string]> {
+/**
+ * Lists template files as [source path relative to template, target path relative to the knowledge folder].
+ * "<name>.committed" files are variants for inbox: committed: they replace "<name>" in that mode and are skipped otherwise.
+ */
+function templateFiles(templateDir: string, inbox: BrainInbox, prefix = ''): Array<[string, string]> {
     const result: Array<[string, string]> = [];
-    for (const dirent of readdirSync(join(templateDir, prefix), { withFileTypes: true })) {
+    const names = readdirSync(join(templateDir, prefix), { withFileTypes: true });
+    const variants = new Set(names.filter((dirent) => dirent.name.endsWith(VARIANT_SUFFIX)).map((dirent) => dirent.name.slice(0, -VARIANT_SUFFIX.length)));
+    for (const dirent of names) {
         const rel = prefix === '' ? dirent.name : `${prefix}/${dirent.name}`;
         if (dirent.isDirectory()) {
-            result.push(...templateFiles(templateDir, rel));
-        } else {
-            result.push([rel, prefix === '' ? (RENAMES[dirent.name] ?? rel) : rel]);
+            result.push(...templateFiles(templateDir, inbox, rel));
+            continue;
         }
+        const isVariant = dirent.name.endsWith(VARIANT_SUFFIX);
+        const baseName = isVariant ? dirent.name.slice(0, -VARIANT_SUFFIX.length) : dirent.name;
+        if (isVariant !== (inbox === 'committed' && variants.has(baseName))) {
+            continue;
+        }
+        const targetName = RENAMES[baseName] ?? baseName;
+        result.push([rel, prefix === '' ? targetName : `${prefix}/${targetName}`]);
     }
     return result.sort((a, b) => (a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0));
 }
@@ -66,22 +79,27 @@ function gitOutput(dir: string, args: string[]): string | null {
 }
 
 /** Lists template files that are missing or differ in the knowledge folder, as [source path, target path]. */
-function staleTemplateFiles(brainDir: string, templateDir: string): Array<[string, string]> {
-    return templateFiles(templateDir).filter(([source, targetRel]) => {
+function staleTemplateFiles(brainDir: string, templateDir: string, inbox: BrainInbox): Array<[string, string]> {
+    return templateFiles(templateDir, inbox).filter(([source, targetRel]) => {
         const file = join(brainDir, targetRel);
         return !existsSync(file) || !readFileSync(file).equals(readFileSync(join(templateDir, source)));
     });
 }
 
 /** Paths relative to the knowledge folder that brain init --update would rewrite from the template. */
-export function outdatedTemplateFiles(brainDir: string, templateDir = TEMPLATE_DIR): string[] {
-    return staleTemplateFiles(brainDir, templateDir).map(([, targetRel]) => targetRel);
+export function outdatedTemplateFiles(brainDir: string, templateDir = TEMPLATE_DIR, inbox: BrainInbox = 'local'): string[] {
+    return staleTemplateFiles(brainDir, templateDir, inbox).map(([, targetRel]) => targetRel);
 }
 
 /** Copies changed template files into the knowledge folder, installs or removes the push guard; returns changed paths. */
-export function updateBrainConfig(brainDir: string, pushGuard: boolean, templateDir = TEMPLATE_DIR): string[] {
+export function updateBrainConfig(
+    brainDir: string,
+    pushGuard: boolean,
+    templateDir = TEMPLATE_DIR,
+    inbox: BrainInbox = 'local',
+): string[] {
     const changed: string[] = [];
-    for (const [source, targetRel] of staleTemplateFiles(brainDir, templateDir)) {
+    for (const [source, targetRel] of staleTemplateFiles(brainDir, templateDir, inbox)) {
         const file = join(brainDir, targetRel);
         mkdirSync(dirname(file), { recursive: true });
         writeFileSync(file, readFileSync(join(templateDir, source)));

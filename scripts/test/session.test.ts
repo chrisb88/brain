@@ -37,7 +37,7 @@ test('brain --version prints the CLI version', () => {
     const result = runCli(emptyDir(), ['--version'], '', emptyDir(), { BRAIN_ROOT: '' });
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.stdout, `${cliVersion()}\n`);
-    assert.equal(cliVersion(), '0.6.2');
+    assert.equal(cliVersion(), '0.7.0');
 });
 
 test('session-start without a knowledge folder prints nothing', () => {
@@ -57,15 +57,23 @@ test('session-start prints the context line', () => {
 test('sessionLines shows the push guard in private mode', () => {
     const dir = emptyDir();
     const plugin = pluginDir(cliVersion());
-    const config = { configRoot: dir, brainDir: dir, path: '.', mode: 'private' as const, pushGuard: true };
+    const config = { configRoot: dir, brainDir: dir, path: '.', mode: 'private' as const, pushGuard: true, inbox: 'local' as const };
     assert.equal(sessionLines(config, plugin, 'off', true)[0], 'Brain: ./ (mode: private, push guard: on, search: off)');
     assert.equal(sessionLines({ ...config, pushGuard: false }, plugin, 'off', true)[0], 'Brain: ./ (mode: private, push guard: off, search: off)');
+});
+
+test('sessionLines shows inbox: committed only in that mode', () => {
+    const dir = emptyDir();
+    const plugin = pluginDir(cliVersion());
+    const config = { configRoot: dir, brainDir: dir, path: 'knowledge', mode: 'project' as const, pushGuard: false, inbox: 'local' as const };
+    assert.equal(sessionLines(config, plugin, 'off', true)[0], 'Brain: knowledge/ (mode: project, search: off)');
+    assert.equal(sessionLines({ ...config, inbox: 'committed' }, plugin, 'off', true)[0], 'Brain: knowledge/ (mode: project, inbox: committed, search: off)');
 });
 
 const warnings: Array<[string, string | null, Record<string, string>, RegExp]> = [
     ['version mismatch', '0.0.1', {}, /Warnung: Plugin 0\.0\.1 und CLI \d+\.\d+\.\d+ passen nicht zusammen/],
     ['broken plugin.json', null, {}, /Warnung: Plugin-Version nicht lesbar/],
-    ['invalid BRAIN_SEARCH', '0.6.2', { BRAIN_SEARCH: 'fast' }, /Brain: Hinweis – BRAIN_SEARCH=fast ist ungültig/],
+    ['invalid BRAIN_SEARCH', '0.7.0', { BRAIN_SEARCH: 'fast' }, /Brain: Hinweis – BRAIN_SEARCH=fast ist ungültig/],
 ];
 for (const [label, version, env, expected] of warnings) {
     test(`session-start warns on ${label} and still exits 0`, () => {

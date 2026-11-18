@@ -3,7 +3,7 @@ import { mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { checkBrain } from '../src/check.ts';
-import { entry, GARMIN, git, initGit, LAUF, runCli, validBrain, writeFile } from './helpers.ts';
+import { entry, GARMIN, git, initGit, LAUF, projectWithBrain, runCli, validBrain, writeFile } from './helpers.ts';
 
 function conflict(id: string, affects: string[]): string {
     return `> [!warning] Conflict ${id}\n> Affects: ${affects.map((a) => `[[${a}]]`).join(', ')}\n> Text`;
@@ -99,4 +99,42 @@ test('cli check exit codes and output', () => {
     const bad = runCli(validBrain({ 'wiki/lose.md': 'x' }), ['check']);
     assert.equal(bad.status, 1);
     assert.match(bad.stdout, /^Fehler:\n {2}- wiki\/lose\.md/);
+});
+
+test('check hints at uncommitted inbox notes only with inbox: committed', () => {
+    const { repo, brain } = projectWithBrain();
+    initGit(repo);
+    writeFile(brain, 'inbox/x.md', 'Notiz\n');
+    const committed = checkBrain(brain, 'project', 'off', false, 'committed').hints.join('\n');
+    assert.match(committed, /1 Notiz\(en\) in inbox\/ nicht committet.*mitcommittet/);
+    assert.match(committed, /Nicht committete Änderungen im Wissens-Ordner/);
+    const local = checkBrain(brain, 'project', 'off', false).hints.join('\n');
+    assert.doesNotMatch(local, /inbox\//);
+    assert.match(local, /Nicht committete Änderungen im Wissens-Ordner/);
+});
+
+test('check gives no inbox hint with inbox: committed when no note is uncommitted', () => {
+    const { repo, brain } = projectWithBrain();
+    initGit(repo);
+    writeFile(brain, 'wiki/technik/neu.md', 'x');
+    assert.doesNotMatch(checkBrain(brain, 'project', 'off', false, 'committed').hints.join('\n'), /inbox\//);
+});
+
+test('the inbox hint does not count .gitkeep as a note', () => {
+    const { repo, brain } = projectWithBrain();
+    initGit(repo);
+    writeFile(brain, 'inbox/.gitkeep', '');
+    assert.doesNotMatch(checkBrain(brain, 'project', 'off', false, 'committed').hints.join('\n'), /Notiz\(en\) in inbox/);
+    writeFile(brain, 'inbox/x.md', 'Notiz\n');
+    assert.match(checkBrain(brain, 'project', 'off', false, 'committed').hints.join('\n'), /^1 Notiz\(en\) in inbox\//m);
+});
+
+test('the inbox hint does not count notes that were archived (deleted from inbox/)', () => {
+    const { repo, brain } = projectWithBrain();
+    writeFile(brain, 'inbox/x.md', 'Notiz\n');
+    initGit(repo);
+    rmSync(join(brain, 'inbox', 'x.md'));
+    const hints = checkBrain(brain, 'project', 'off', false, 'committed').hints.join('\n');
+    assert.match(hints, /Nicht committete Änderungen im Wissens-Ordner/);
+    assert.doesNotMatch(hints, /Notiz\(en\) in inbox/);
 });

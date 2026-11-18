@@ -9,6 +9,7 @@ import { type BrainMode, brainConfig, brainStarts, CONFIG_FILE, findBrainConfig,
 import { commitCommand } from './git.ts';
 import { hasPushGuard } from './guard.ts';
 import { runIndex } from './indexer.ts';
+import { listInbox } from './inbox.ts';
 import { initBrain, updateBrainConfig } from './init.ts';
 import { linkEntries } from './link.ts';
 import { appendLog, isLogOp } from './log.ts';
@@ -80,6 +81,9 @@ Commands:
   qmd <qmd-arguments>
       Run qmd on this knowledge folder's own index, e.g. "brain qmd search Ingress -c wiki",
       "brain qmd update", "brain qmd mcp".
+  list-inbox
+      List the notes in inbox/ (one path per line), oldest first: by modification time, with
+      inbox: committed by the time each note was added to Git. This is the order /brain:ingest uses.
   index
       Rebuild INDEX.md and graph.json from the markdown files.
   refresh
@@ -242,6 +246,15 @@ function run(argv: string[], now: Date): number {
             console.log(archiveNote(root, callerPath(positionals[0]), values.category, now));
             return 0;
         }
+        case 'list-inbox': {
+            if (rest.length > 0) {
+                throw new Error('Verwendung: brain list-inbox');
+            }
+            for (const note of listInbox(root, config?.inbox ?? 'local')) {
+                console.log(note);
+            }
+            return 0;
+        }
         case 'log': {
             const [op, target, ...description] = rest;
             if (op === undefined || target === undefined) {
@@ -317,7 +330,7 @@ function run(argv: string[], now: Date): number {
             return 0;
         }
         case 'check': {
-            const report = checkBrain(root, config?.mode, searchLevel(), config?.pushGuard);
+            const report = checkBrain(root, config?.mode, searchLevel(), config?.pushGuard, config?.inbox);
             if (report.errors.length > 0) {
                 console.log(['Fehler:', ...report.errors.map((error) => `  - ${error}`)].join('\n'));
             }
@@ -410,7 +423,7 @@ function run(argv: string[], now: Date): number {
                 const guardBefore = hasPushGuard(current.brainDir);
                 const changed = [
                     ...(rewriteBrainConfig(current) ? [CONFIG_FILE] : []),
-                    ...updateBrainConfig(current.brainDir, current.pushGuard)
+                    ...updateBrainConfig(current.brainDir, current.pushGuard, undefined, current.inbox)
                         .map((rel) => (current.path === '.' ? rel : `${current.path}/${rel}`)),
                 ];
                 const guardAfter = hasPushGuard(current.brainDir);
