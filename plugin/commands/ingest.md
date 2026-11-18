@@ -7,7 +7,7 @@ Verarbeite die Inbox gemäß Skill `brain` (Regeln, Suchleiter) und dessen `writ
 
 Ist `$ARGUMENTS` nicht leer:
 - Ohne `inbox: committed` in der Kontextzeile: zuerst wörtlich als `inbox/chat-note.md` speichern (`chat-note-2.md`, … falls belegt); den Zeitstempel ergänzt später `brain archive`.
-- Mit `inbox: committed`: wörtlich als `inbox/chat-note-$(date +%Y%m%d-%H%M%S).md` speichern (kollisionsfrei, weil mehrere Branches Notizen anlegen), **nicht ingesten** und beenden. Dem Nutzer sagen: „Notiz mitcommitten (`git add <Wissens-Ordner>/inbox && git commit …`); `/brain:ingest` läuft erst nach dem Merge auf dem Basis-Branch.“ Nie committen.
+- Mit `inbox: committed`: wörtlich als `inbox/chat-note-<Zeitstempel>.md` speichern, den Zeitstempel zuvor per `date +%Y%m%d-%H%M%S` ermitteln (kollisionsfrei, weil mehrere Branches Notizen anlegen), **nicht ingesten** und beenden. Dem Nutzer sagen: „Notiz mitcommitten (`git add <Wissens-Ordner>/inbox && git commit …`); `/brain:ingest` läuft erst nach dem Merge auf dem Basis-Branch.“ Nie committen.
 
 ## 1. Vorprüfung – bei Fehlschlag abbrechen
 

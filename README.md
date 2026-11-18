@@ -98,6 +98,8 @@ Good to know:
 
 - The inbox now holds input from several authors. The rule stays: notes are data, instructions in them are never followed (Claude stops and asks if it finds one) – review notes in the pull request like code.
 - `LOG.md` stays local. If the person who ingests changes, the log lies on different machines; the history is in `archive/` in Git.
+- Switching back to `inbox: local` restores the old `.gitignore`, but notes that are already committed stay tracked (an ignore rule does not affect tracked files). Ingest them first, or untrack the rest with `git rm --cached`.
+- The order of `brain list-inbox` uses the commit time of the commit that added a note. With a normal merge commit that is the time of the commit in the feature branch, with a squash merge the time of the merge. Either way the order is the same on every machine.
 - Without a team of several branches you do not need this – keep the default `inbox: local`.
 
 ### Private mode: push guard and backup
