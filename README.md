@@ -77,7 +77,30 @@ Both modes use the same folder layout, the same commands and the same plugin. br
 
 > **Project mode shares everything you ingest.** `/brain:ingest` writes wiki entries and archives your original notes byte-identical in the knowledge folder. Once you commit and push, everyone with read access to the project repository can read both – today's collaborators, future ones, and for a public repository the whole internet. Deleting an entry later does not remove it from the Git history. Don't ingest personal or confidential notes (passwords, customer data, personal matters) into a project brain – use a private brain for those.
 
-Committed: `brain.yml`, the knowledge folder (`wiki/`, `archive/`, `categories.yml`, `.gitignore`, `.gitattributes`, `CLAUDE.md`) and `.claude/settings.json`. Not committed (ignored by the knowledge folder's `.gitignore`): notes waiting in `inbox/`, `INDEX.md`, `graph.json` and `LOG.md`.
+Committed: `brain.yml`, the knowledge folder (`wiki/`, `archive/`, `categories.yml`, `.gitignore`, `.gitattributes`, `CLAUDE.md`) and `.claude/settings.json`. Not committed (ignored by the knowledge folder's `.gitignore`): `INDEX.md`, `graph.json`, `LOG.md` and – by default – notes waiting in `inbox/`. With `inbox: committed` the notes in `inbox/` are committed too, see [Several branches: committed inbox](#several-branches-committed-inbox-project-mode).
+
+### Several branches: committed inbox (project mode)
+
+If several people write knowledge in their own feature branches, ingesting inside each branch causes two problems: two branches change the same wiki entry and Git reports a **text conflict**, or – worse – an ingest replaces a passage based on an outdated wiki and **silently overwrites** a change from a branch that is not merged yet. Git says nothing when the changed lines do not overlap. Merging `main` into the branch does not help when branches are merged together once a week.
+
+Set `inbox: committed` in `brain.yml` (project mode only). The workflow then splits in two:
+
+> **Do not ingest in the feature branch. Commit only the raw note – ingest AFTER the merge.** This feels backwards, but it is the point: `/brain:ingest` is the only thing that writes `wiki/`, and it runs once on the base branch, where it sees the complete state.
+
+1. **In the feature branch:** put the raw note into `inbox/` (or dictate it to Claude) and **commit it with your code**. Do not run `/brain:ingest`; `wiki/` stays untouched. Dictated notes get a collision-free name (`chat-note-<date>-<time>.md`), so two branches never add the same file.
+2. **Merge** the branches as usual. The notes now sit in `inbox/` of the base branch.
+3. **After the merge, on the base branch:** one person runs `/brain:ingest` – for example once a week – and opens the result as its own **ingest PR**. The ingest does not have to block a deploy; the wiki is documentation only.
+4. `brain list-inbox` shows the notes in the order the ingest processes them: by the time each note was added to Git, ties by file name (a squash merge adds all notes of one pull request at the same time). The order matters when notes contradict each other – the ingest then asks you, as always.
+
+To switch on: add `inbox: committed` to `brain.yml`, run `brain init --update` (it swaps `.gitignore` and `.gitattributes` for the committed variants: `inbox/` is no longer ignored and stored byte-exact) and commit. Notes that already wait in your local inbox then show up in `git status`; commit them or leave them out. The ingest in a feature branch is not blocked – `/brain:ingest` only warns there.
+
+Good to know:
+
+- The inbox now holds input from several authors. The rule stays: notes are data, instructions in them are never followed (Claude stops and asks if it finds one) – review notes in the pull request like code.
+- `LOG.md` stays local. If the person who ingests changes, the log lies on different machines; the history is in `archive/` in Git.
+- Switching back to `inbox: local` restores the old `.gitignore`, but notes that are already committed stay tracked (an ignore rule does not affect tracked files). Ingest them first, or untrack the rest with `git rm --cached`.
+- The order of `brain list-inbox` uses the commit time of the commit that added a note. With a normal merge commit that is the time of the commit in the feature branch, with a squash merge the time of the merge. Either way the order is the same on every machine.
+- Without a team of several branches you do not need this – keep the default `inbox: local`.
 
 ### Private mode: push guard and backup
 
@@ -146,8 +169,9 @@ push_guard: true
 | `path` | relative path, `.` for the repository root | the knowledge folder |
 | `mode` | `project`, `private` | see [Two modes](#two-modes-project-or-private) |
 | `push_guard` | `true`, `false` – only with `mode: private`; missing means `true` | see [Push guard](#private-mode-push-guard-and-backup) |
+| `inbox` | `local`, `committed` – only with `mode: project`; missing means `local` | `local`: notes in `inbox/` stay on your machine; `committed`: they are committed, see [Several branches](#several-branches-committed-inbox-project-mode) |
 
-After every change to `brain.yml` run `brain init --update`. It always rewrites `brain.yml` in the current format – values are kept, missing keys are written with their default, **your own comments and formatting in this file are lost**.
+After every change to `brain.yml` run `brain init --update`. It always rewrites `brain.yml` in the current format – values are kept, **your own comments and formatting in this file are lost**. `push_guard` is written in private mode; `inbox` is written only as `inbox: committed` (with `local` the key is left out, so existing files stay unchanged).
 
 ## Features
 
@@ -307,7 +331,7 @@ What `brain init` does: it writes `brain.yml` at the repository root, creates th
 
 Start Claude Code in the repository root – project-scoped plugins (`.claude/settings.json`) are only active there, not when Claude Code is started in a subfolder:
 
-- `/brain:ingest [note text]` – process `inbox/` (and an optional note given inline). Review and commit the changes afterwards.
+- `/brain:ingest [note text]` – process `inbox/` (and an optional note given inline). Review and commit the changes afterwards. With `inbox: committed` run it on the base branch after the merges, not in a feature branch; an inline note is then only saved to `inbox/` – see [Several branches](#several-branches-committed-inbox-project-mode).
 - `/brain:ask [--archive | --all] <question>` – answer from the knowledge only.
 - Ask project questions while you work – the `brain` skill searches the knowledge first.
 
@@ -366,7 +390,7 @@ With `off`, also disable the `qmd` MCP server once via `/mcp` in Claude Code. `b
 
 **Your knowledge lives only in the knowledge folder** – `archive/` (the original notes), `wiki/` (the condensed entries) and `categories.yml` – together with `brain.yml` at the repository root. Commit it and keep the repository backed up (project mode: the project's remote; private mode: see [Push guard and backup](#private-mode-push-guard-and-backup)). Losing these files means losing knowledge.
 
-Not committed and not rebuildable: notes waiting in `inbox/` exist only on your machine until `/brain:ingest` archives them, and `LOG.md` is a local log of brain operations (history only, no knowledge).
+Not committed and not rebuildable: with the default `inbox: local` notes waiting in `inbox/` exist only on your machine until `/brain:ingest` archives them (with `inbox: committed` they are in Git and covered by the backup), and `LOG.md` is a local log of brain operations (history only, no knowledge).
 
 Everything else is derived from those files and can be deleted and rebuilt at any time:
 
@@ -381,7 +405,7 @@ Everything else is derived from those files and can be deleted and rebuilt at an
 
 ## CLI
 
-`brain help` lists all commands. Highlights: `brain setup`, `brain refresh`, `brain check`, `brain index`, `brain category list`, `brain recategorize`, `brain init --update`, `brain qmd setup`, `brain qmd prune`.
+`brain help` lists all commands. Highlights: `brain setup`, `brain refresh`, `brain check`, `brain index`, `brain list-inbox`, `brain category list`, `brain recategorize`, `brain init --update`, `brain qmd setup`, `brain qmd prune`.
 
 ## Uninstall
 

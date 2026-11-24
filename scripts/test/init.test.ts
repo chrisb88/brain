@@ -7,7 +7,8 @@ import { loadCategories } from '../src/categories.ts';
 import { checkBrain } from '../src/check.ts';
 import { formatBrainConfig, loadBrainConfig } from '../src/config.ts';
 import { hasPushGuard } from '../src/guard.ts';
-import { initBrain, type InitOptions, updateBrainConfig } from '../src/init.ts';
+import { archiveNote } from '../src/archive.ts';
+import { initBrain, type InitOptions, outdatedTemplateFiles, TEMPLATE_DIR, updateBrainConfig } from '../src/init.ts';
 import { emptyDir, entry, git, LAUF, read, runCli, stubClaude, writeFile } from './helpers.ts';
 
 const PROJECT_FILES: Record<string, string> = {
@@ -42,7 +43,7 @@ test('initBrain creates a project brain in a subfolder without touching the proj
     const repo = project();
     const result = initBrain({ cwd: repo, path: 'knowledge', private: false });
     assert.deepEqual(result, { configRoot: repo, brainDir: join(repo, 'knowledge'), mode: 'project', pushGuard: false, createdRepo: false });
-    assert.deepEqual(loadBrainConfig(repo), { configRoot: repo, brainDir: join(repo, 'knowledge'), path: 'knowledge', mode: 'project', pushGuard: false });
+    assert.deepEqual(loadBrainConfig(repo), { configRoot: repo, brainDir: join(repo, 'knowledge'), path: 'knowledge', mode: 'project', pushGuard: false, inbox: 'local' });
     for (const rel of ['.gitignore', '.gitattributes', 'CLAUDE.md', 'categories.yml', 'inbox/.gitkeep', 'INDEX.md', 'graph.json']) {
         assert.ok(existsSync(join(repo, 'knowledge', rel)), rel);
     }
@@ -392,4 +393,80 @@ test('cli init --update names the changed files relative to the repository root'
     const result = runCli(repo, ['init', '--update'], '', repo);
     assert.equal(result.status, 0, result.stderr);
     assert.match(result.stdout, /^Im Repo-Root committen: git add 'docs\/Mein Wissen\/CLAUDE\.md' && git commit -m "brain: Konfiguration aktualisieren"$/m);
+});
+
+test('updateBrainConfig writes the committed variants of .gitignore and .gitattributes', () => {
+    const repo = project();
+    const { brainDir } = initBrain({ cwd: repo, path: 'knowledge', private: false });
+    updateBrainConfig(brainDir, false, TEMPLATE_DIR, 'committed');
+    const ignore = read(brainDir, '.gitignore').split('\n');
+    assert.ok(!ignore.includes('inbox/*'));
+    assert.ok(!ignore.includes('!inbox/.gitkeep'));
+    for (const line of ['INDEX.md', 'graph.json', 'LOG.md']) {
+        assert.ok(ignore.includes(line), line);
+    }
+    const attributes = read(brainDir, '.gitattributes').split('\n');
+    assert.ok(attributes.includes('inbox/** -text'));
+    assert.ok(attributes.includes('archive/** -text'));
+    assert.equal(existsSync(join(brainDir, '_gitignore.committed')), false);
+    assert.equal(existsSync(join(brainDir, '.gitignore.committed')), false);
+    assert.equal(existsSync(join(brainDir, '_gitattributes.committed')), false);
+    assert.equal(existsSync(join(brainDir, '.gitattributes.committed')), false);
+});
+
+test('updateBrainConfig keeps the local variants byte-identical to the template by default', () => {
+    const repo = project();
+    const { brainDir } = initBrain({ cwd: repo, path: 'knowledge', private: false });
+    assert.deepEqual(readFileSync(join(brainDir, '.gitignore')), readFileSync(join(TEMPLATE_DIR, '_gitignore')));
+    assert.deepEqual(readFileSync(join(brainDir, '.gitattributes')), readFileSync(join(TEMPLATE_DIR, '_gitattributes')));
+    assert.ok(read(brainDir, '.gitignore').split('\n').includes('inbox/*'));
+});
+
+test('outdatedTemplateFiles follows the inbox variant', () => {
+    const repo = project();
+    const { brainDir } = initBrain({ cwd: repo, path: 'knowledge', private: false });
+    assert.deepEqual(outdatedTemplateFiles(brainDir, TEMPLATE_DIR, 'committed'), ['.gitattributes', '.gitignore']);
+    assert.deepEqual(outdatedTemplateFiles(brainDir), []);
+    updateBrainConfig(brainDir, false, TEMPLATE_DIR, 'committed');
+    assert.deepEqual(outdatedTemplateFiles(brainDir, TEMPLATE_DIR, 'committed'), []);
+    assert.deepEqual(outdatedTemplateFiles(brainDir), ['.gitattributes', '.gitignore']);
+});
+
+test('cli init --update keeps inbox: committed and writes the committed templates', () => {
+    const repo = project();
+    const { brainDir } = initBrain({ cwd: repo, path: 'knowledge', private: false });
+    writeFile(repo, 'brain.yml', formatBrainConfig('knowledge', 'project', false, 'committed'));
+    const before = read(repo, 'brain.yml');
+    const result = runCli(repo, ['init', '--update'], '', repo, { BRAIN_ROOT: '' });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(read(repo, 'brain.yml'), before);
+    assert.ok(!read(brainDir, '.gitignore').split('\n').includes('inbox/*'));
+    assert.equal(runCli(repo, ['init', '--update'], '', repo, { BRAIN_ROOT: '' }).stdout, 'Konfiguration ist aktuell.\n');
+});
+
+test('check does not report outdated templates for inbox: committed after init --update', () => {
+    const repo = project();
+    initBrain({ cwd: repo, path: 'knowledge', private: false });
+    writeFile(repo, 'brain.yml', formatBrainConfig('knowledge', 'project', false, 'committed'));
+    const before = runCli(repo, ['check'], '', repo, { BRAIN_ROOT: '', BRAIN_SEARCH: 'off' });
+    assert.match(before.stdout, /Vorlagen veraltet/);
+    runCli(repo, ['init', '--update'], '', repo, { BRAIN_ROOT: '' });
+    const after = runCli(repo, ['check'], '', repo, { BRAIN_ROOT: '', BRAIN_SEARCH: 'off' });
+    assert.doesNotMatch(after.stdout, /Vorlagen veraltet/);
+});
+
+test('committed inbox: a CRLF note moves to archive byte-identical and git sees a rename', () => {
+    const repo = project();
+    const { brainDir } = initBrain({ cwd: repo, path: 'knowledge', private: false });
+    updateBrainConfig(brainDir, false, TEMPLATE_DIR, 'committed');
+    git(repo, 'add', '-A');
+    git(repo, 'commit', '-q', '-m', 'brain');
+    const note = 'Erste Zeile\r\nzweite Zeile mit Umlaut ä\r\ndritte Zeile\r\n';
+    writeFile(brainDir, 'inbox/crlf.md', note);
+    git(repo, 'add', '-A');
+    git(repo, 'commit', '-q', '-m', 'note');
+    const target = archiveNote(brainDir, join(brainDir, 'inbox', 'crlf.md'), '_uncategorized', new Date(2026, 10, 18, 9, 5));
+    assert.deepEqual(readFileSync(join(brainDir, target)), Buffer.from(note));
+    git(repo, 'add', '-A');
+    assert.match(git(repo, 'status', '--porcelain'), /^R {2}knowledge\/inbox\/crlf\.md -> knowledge\/archive\/_uncategorized\//m);
 });

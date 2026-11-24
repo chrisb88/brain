@@ -1,10 +1,10 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { isKnownCategory, UNCATEGORIZED } from './categories.ts';
-import type { BrainMode } from './config.ts';
+import type { BrainInbox, BrainMode } from './config.ts';
 import { archiveIntegrityErrors, brainPathInRepo, commitCommand, isGitRepo, shellArg, uncommittedChanges } from './git.ts';
 import { hasPushGuard, pushGuardErrors } from './guard.ts';
-import { outdatedTemplateFiles } from './init.ts';
+import { outdatedTemplateFiles, TEMPLATE_DIR } from './init.ts';
 import { qmdCheck } from './qmd.ts';
 import { extractLinks, getRelated, headings, parseOpenPoints, splitFrontmatter } from './markdown.ts';
 import { existsExactCase, hasParentSegment, normalizeId } from './paths.ts';
@@ -166,6 +166,7 @@ export function checkBrain(
     mode: BrainMode = 'project',
     level: SearchLevel = searchLevel(),
     pushGuard: boolean = mode === 'private',
+    inbox: BrainInbox = 'local',
 ): CheckReport {
     const errors: string[] = [];
     const hints: string[] = [];
@@ -194,11 +195,16 @@ export function checkBrain(
             const path = brainPathInRepo(root);
             hints.push(`Nicht committete Änderungen im Wissens-Ordner (${changed.length} Datei(en)) – prüfen (git status ${shellArg(path)}) `
                 + `und im Repo-Root committen: ${commitCommand([path], 'brain: Wissen aktualisieren')}`);
+            const notes = changed.filter((file) => file.startsWith('inbox/') && file !== 'inbox/.gitkeep' && existsSync(join(root, file))).length;
+            if (inbox === 'committed' && notes > 0) {
+                hints.push(`${notes} Notiz(en) in inbox/ nicht committet – im Modus inbox: committed müssen Notizen im Branch `
+                    + 'mitcommittet werden (kein Ingest im Feature-Branch)');
+            }
         }
     } else {
         hints.push('Kein Git-Repository – Archiv-Integrität wurde nicht geprüft.');
     }
-    const outdated = outdatedTemplateFiles(root);
+    const outdated = outdatedTemplateFiles(root, TEMPLATE_DIR, inbox);
     if (outdated.length > 0) {
         hints.push(`Vorlagen veraltet (${outdated.join(', ')}) – brain init --update ausführen und committen; eigene Ergänzungen in diesen Dateien gehen dabei verloren`);
     }
